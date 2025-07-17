@@ -24,5 +24,7 @@ fn main() {
         resized.into_vec(),
     ).unwrap().mapv(|l| l as f32) / 255.0;
 
-    println!("{:?}", dauntless::tags(data));
+    let tags = dauntless::tags(data);
+
+    println!("{:?}", tags);
 }

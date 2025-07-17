@@ -2,6 +2,9 @@ use crate::types::{Lightness, Mask};
 
 use ndarray::{s, Array2, Zip};
 
+const HYST_LOW_T: f32 = 0.05;
+const HYST_HIGH_T: f32 = 0.3;
+
 pub fn nms(mag: &Lightness, orient: &Lightness) -> Lightness {
     let (h, w) = mag.dim();
 
@@ -43,12 +46,12 @@ pub fn nms(mag: &Lightness, orient: &Lightness) -> Lightness {
         })
 }
 
-pub fn hysteresis(edges: &Lightness, low_t: f32, high_t: f32) -> Mask {
+pub fn hysteresis(edges: &Lightness) -> Mask {
     let max = edges.iter().cloned().reduce(f32::max).unwrap();
     let norm = edges / max;
 
-    let strong = norm.mapv(|v| v > high_t);
-    let weak = norm.mapv(|v| v > low_t && v < high_t);
+    let strong = norm.mapv(|v| v > HYST_HIGH_T);
+    let weak = norm.mapv(|v| v > HYST_LOW_T && v <= HYST_HIGH_T);
 
     Array2::from_shape_fn(edges.dim(), |(y, x)| {
         let str = strong[[y, x]];

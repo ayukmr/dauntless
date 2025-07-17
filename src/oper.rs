@@ -5,6 +5,8 @@ use std::cmp;
 
 use ndarray::{s, Array2};
 
+const BLUR_R: f32 = 0.15;
+
 pub fn blur(img: &Lightness) -> Lightness {
     let (h, w) = img.dim();
 
@@ -22,7 +24,7 @@ pub fn blur(img: &Lightness) -> Lightness {
     let mh = h as f32 / 2.0;
 
     let dist = ((x - mw).powi(2) + (y - mh).powi(2)).mapv(f32::sqrt);
-    let sigma = 0.15 * cmp::min(h, w) as f32;
+    let sigma = BLUR_R * cmp::min(h, w) as f32;
 
     let freq = fft::to_freq(img);
     let mask = (-dist.powi(2) / (2.0 * sigma.powi(2))).exp();

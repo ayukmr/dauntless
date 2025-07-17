@@ -3,6 +3,9 @@ use crate::types::{Mask, Shapes, Point, Points};
 use std::collections::{HashMap, HashSet};
 use ndarray::{s, Array1, Array2};
 
+const SEG_THRESH: f32 = 1.5;
+const PARA_THRESH: f32 = 0.75;
+
 pub fn tags(edges: &Mask, corners: &Mask) -> Shapes {
     let shapes = find_shapes(edges, corners);
     let quads = filter_quads(shapes);
@@ -138,7 +141,7 @@ fn on_segment(p: &Point, a: &Point, b: &Point) -> bool {
     let cross = ab[0] * ap[1] - ab[1] * ap[0];
     let norm = f32::sqrt(ab[0].powi(2) + ab[1].powi(2));
 
-    if cross > 1.5 * norm {
+    if cross > SEG_THRESH * norm {
         return false;
     }
 
@@ -166,7 +169,7 @@ fn filter_paras(quads: Shapes) -> Shapes {
         let h_diff = (hd0 / hd1).abs();
         let v_diff = (vd0 / vd1).abs();
 
-        if (h_diff - 1.0).abs() + (v_diff - 1.0).abs() < 0.75 {
+        if (h_diff - 1.0).abs() + (v_diff - 1.0).abs() < PARA_THRESH {
             Some(pts)
         } else {
             None

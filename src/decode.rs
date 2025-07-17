@@ -13,8 +13,10 @@ const CODES: [u64; 11] = [
     4401062356,
     9313320621,
     10295772274,
-    14225578886
+    14225578886,
 ];
+
+const TAG_SIZE: usize = 6;
 
 pub fn decode(img: &Lightness, points: Corners) -> Option<u8> {
     let tag = sample(img, points);
@@ -40,14 +42,14 @@ pub fn decode(img: &Lightness, points: Corners) -> Option<u8> {
     None
 }
 
-fn sample(
-    img: &Lightness,
-    corners: Corners,
-) -> Lightness {
-    let idx = Array1::from_shape_fn(6, |i| (i as f32 + 1.5) / 8.0);
+fn sample(img: &Lightness, corners: Corners) -> Lightness {
+    let idx = Array1::from_shape_fn(
+        TAG_SIZE,
+        |i| (i as f32 + 1.5) / (TAG_SIZE + 2) as f32,
+    );
 
-    let u = Array2::from_shape_fn((6, 6), |(_, x)| idx[x]);
-    let v = Array2::from_shape_fn((6, 6), |(y, _)| idx[y]);
+    let u = Array2::from_shape_fn((TAG_SIZE, TAG_SIZE), |(_, x)| idx[x]);
+    let v = Array2::from_shape_fn((TAG_SIZE, TAG_SIZE), |(y, _)| idx[y]);
 
     let inv_u = u.mapv(|x| 1.0 - x);
     let inv_v = v.mapv(|x| 1.0 - x);
