@@ -52,20 +52,66 @@ fn main() -> opencv::Result<()> {
         let tags = dauntless::tags(data);
 
         for (id, deg, (tl, tr, bl, br)) in tags {
-            for (x, y) in [tl, tr, bl, br] {
-                let pos = core::Point::new(
-                    (x as f32 / scale) as i32,
-                    (y as f32 / scale) as i32,
+            let corners = [tl, tr, br, bl];
+
+            let xs: Vec<u32> = corners.iter().map(|pt| pt.0).collect();
+            let ys: Vec<u32> = corners.iter().map(|pt| pt.1).collect();
+
+            let x = (xs.iter().min().unwrap() + xs.iter().max().unwrap()) / 2;
+            let y = (ys.iter().min().unwrap() + ys.iter().max().unwrap()) / 2;
+
+            let label =
+                if let Some(id) = id {
+                    format!("{}@{}*", id, deg.unwrap_or_default())
+                } else {
+                    format!("{}*", deg.unwrap_or_default())
+                };
+
+            let size = imgproc::get_text_size(
+                &label,
+                imgproc::FONT_HERSHEY_DUPLEX,
+                0.65,
+                2,
+                &mut 0,
+            )?;
+
+            imgproc::put_text(
+                &mut frame,
+                &label,
+                core::Point::new(
+                    (x as f32 / scale) as i32 - size.width / 2,
+                    (y as f32 / scale) as i32 + size.height / 2,
+                ),
+                imgproc::FONT_HERSHEY_DUPLEX,
+                0.65,
+                core::Scalar::new(0.0, 0.0, 255.0, 0.0),
+                2,
+                imgproc::LINE_8,
+                false,
+            )?;
+
+            for i in 0..4 {
+                let c0 = corners[i];
+                let c1 = corners[(i + 1) % 4];
+
+                let p1 = core::Point::new(
+                    (c0.0 as f32 / scale) as i32,
+                    (c0.1 as f32 / scale) as i32,
                 );
 
-                imgproc::circle(
+                let p2 = core::Point::new(
+                    (c1.0 as f32 / scale) as i32,
+                    (c1.1 as f32 / scale) as i32,
+                );
+
+                imgproc::line(
                     &mut frame,
-                    pos,
-                    5,
+                    p1,
+                    p2,
                     core::Scalar::new(0.0, 0.0, 255.0, 0.0),
-                    -1,
+                    2,
                     imgproc::LINE_8,
-                    0,
+                    0
                 )?;
             }
         }
