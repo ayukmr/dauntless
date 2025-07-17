@@ -1,0 +1,7 @@
+# macos
+.DS_Store
+
+# cargo
+Cargo.lock
+debug/
+target/
