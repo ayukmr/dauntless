@@ -1,5 +1,5 @@
-use crate::types::{Corners, Lightness};
 use crate::{mask, tags, decode};
+use crate::types::{Corners, Lightness};
 
 pub fn process(data: Lightness) -> Vec<(Option<u8>, Option<i8>, Corners)> {
     let edges = mask::canny(&data);

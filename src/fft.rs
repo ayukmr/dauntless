@@ -6,7 +6,7 @@ use num_complex::Complex;
 use rustfft::FftPlanner;
 
 pub fn to_freq(data: &Lightness) -> Frequency {
-    let complex = data.mapv(|x| Complex::from(x));
+    let complex = data.mapv(Complex::from);
 
     let freq = fft2(&complex, false);
     let shifted = shift(&freq, false);
@@ -15,7 +15,7 @@ pub fn to_freq(data: &Lightness) -> Frequency {
 }
 
 pub fn from_freq(freq: &Frequency) -> Lightness {
-    let shifted = shift(&freq, true);
+    let shifted = shift(freq, true);
     let data = fft2(&shifted, true);
 
     data.mapv(|n| n.re)

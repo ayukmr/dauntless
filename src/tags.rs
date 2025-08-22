@@ -42,7 +42,7 @@ fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                     .collect();
 
             let id =
-                if ids.len() > 0 {
+                if !ids.is_empty() {
                     for i0 in &ids {
                         for i1 in &ids {
                             if i0 != i1 && i0 < i1 {
@@ -110,7 +110,7 @@ fn filter_quads(shapes: Shapes) -> Shapes {
                     pts
                         .into_iter()
                         .filter(|pt| {
-                            !outer.contains(&pt) &&
+                            !outer.contains(pt) &&
                             !on_segment(pt, &tl, &tr) &&
                             !on_segment(pt, &tr, &br) &&
                             !on_segment(pt, &br, &bl) &&
@@ -180,7 +180,7 @@ fn filter_paras(quads: Shapes) -> Shapes {
 fn filter_enclosed(quads: Shapes) -> Shapes {
     quads.clone().into_iter().filter(|pts| {
         let (x0s, y0s): (Vec<u32>, Vec<u32>) =
-            pts.into_iter().cloned().unzip();
+            pts.iter().cloned().unzip();
 
         let x00 = x0s.iter().min();
         let x01 = x0s.iter().max();
@@ -194,7 +194,7 @@ fn filter_enclosed(quads: Shapes) -> Shapes {
             }
 
             let (x1s, y1s): (Vec<u32>, Vec<u32>) =
-                others.into_iter().cloned().unzip();
+                others.iter().cloned().unzip();
 
             let x10 = x1s.iter().min();
             let x11 = x1s.iter().max();

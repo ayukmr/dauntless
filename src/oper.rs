@@ -53,8 +53,8 @@ pub fn sobel(img: &Lightness) -> (Lightness, Lightness) {
         ],
     ).unwrap();
 
-    let x = apply(&img, &sobel_x);
-    let y = apply(&img, &sobel_y);
+    let x = apply(img, &sobel_x);
+    let y = apply(img, &sobel_y);
 
     (x, y)
 }
@@ -63,7 +63,7 @@ fn apply(img: &Lightness, kernel: &Lightness) -> Lightness {
     let mut padded = Array2::zeros(img.dim());
 
     let (kh, kw) = kernel.dim();
-    padded.slice_mut(s![..kh, ..kw]).assign(&kernel);
+    padded.slice_mut(s![..kh, ..kw]).assign(kernel);
 
     let f_img = fft::to_freq(img);
     let f_knl = fft::to_freq(&padded);
