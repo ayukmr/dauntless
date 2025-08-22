@@ -1,4 +1,3 @@
-mod debug;
 mod types;
 mod fft;
 mod oper;
