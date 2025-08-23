@@ -1,13 +1,15 @@
 use crate::{mask, tags, decode};
 use crate::types::{Corners, Lightness};
 
+use rayon::prelude::*;
+
 pub fn process(data: Lightness) -> Vec<(Option<u8>, Option<i8>, Corners)> {
     let edges = mask::canny(&data);
     let corners = mask::harris(&data);
 
     let tags = tags::tags(&edges, &corners);
 
-    tags.into_iter().map(|pts| {
+    tags.into_par_iter().map(|pts| {
         let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
         let tr = *pts.iter().min_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
         let bl = *pts.iter().max_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();

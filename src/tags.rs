@@ -1,5 +1,7 @@
 use crate::types::{Mask, Shapes, Point, Points};
 
+use rayon::prelude::*;
+
 use std::collections::{HashMap, HashSet};
 use ndarray::{s, Array1, Array2};
 
@@ -94,7 +96,7 @@ fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
 
 fn filter_quads(shapes: Shapes) -> Shapes {
     shapes
-        .into_iter()
+        .into_par_iter()
         .filter_map(|pts| {
             let count = pts.len();
 
@@ -108,7 +110,7 @@ fn filter_quads(shapes: Shapes) -> Shapes {
 
                 let mut counted: Points =
                     pts
-                        .into_iter()
+                        .into_par_iter()
                         .filter(|pt| {
                             !outer.contains(pt) &&
                             !on_segment(pt, &tl, &tr) &&
@@ -149,7 +151,7 @@ fn on_segment(p: &Point, a: &Point, b: &Point) -> bool {
 }
 
 fn filter_paras(quads: Shapes) -> Shapes {
-    quads.into_iter().filter_map(|pts| {
+    quads.into_par_iter().filter_map(|pts| {
         let mut h = pts.clone();
         h.sort_by_key(|p| (p.0, p.1));
 
@@ -178,7 +180,7 @@ fn filter_paras(quads: Shapes) -> Shapes {
 }
 
 fn filter_enclosed(quads: Shapes) -> Shapes {
-    quads.clone().into_iter().filter(|pts| {
+    quads.clone().into_par_iter().filter(|pts| {
         let (x0s, y0s): (Vec<u32>, Vec<u32>) =
             pts.iter().cloned().unzip();
 
@@ -188,7 +190,7 @@ fn filter_enclosed(quads: Shapes) -> Shapes {
         let y00 = y0s.iter().min();
         let y01 = y0s.iter().max();
 
-        !quads.iter().any(|others| {
+        !quads.par_iter().any(|others| {
             if others == pts {
                 return false;
             }
