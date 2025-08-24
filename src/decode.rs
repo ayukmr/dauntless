@@ -25,14 +25,14 @@ pub fn decode(img: &Lightness, points: Corners) -> Option<u8> {
     let mut bits = (&tag / max).mapv(|l| l > 0.5);
 
     for _ in 0..4 {
-        let id =
+        let bin =
             bits
                 .iter()
                 .fold(0, |n, &t| (n << 1) | if t { 1 } else { 0 });
 
-        let idx = CODES.iter().position(|&i| i == id);
+        let id = CODES.iter().position(|&i| i == bin);
 
-        if let Some(idx) = idx {
+        if let Some(idx) = id {
             return Some(idx as u8);
         }
 
