@@ -76,5 +76,5 @@ fn sample(img: &Lightness, corners: Corners) -> Lightness {
 }
 
 fn rot90<T: Clone>(a: Array2<T>) -> Array2<T> {
-    a.slice_move(s![.., ..;-1])
+    a.slice(s![..;-1, ..]).reversed_axes().to_owned()
 }
