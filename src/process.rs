@@ -19,14 +19,17 @@ pub fn process(data: Lightness) -> Vec<(Option<u8>, Option<i8>, Corners)> {
 
         let id = decode::decode(&data, corners);
 
-        let vis = tr.0 - tl.0;
+        let x0 = tr.0 - tl.0;
+        let x1 = br.0 - bl.0;
 
-        let y0 = br.1 - tr.1;
-        let y1 = bl.1 - tl.1;
+        let vis = (x0 + x1) / 2;
+
+        let y0 = bl.1 - tl.1;
+        let y1 = br.1 - tr.1;
 
         let real = (y0 + y1) / 2;
 
-        let sign = if y0 > y1 { -1.0 } else { 1.0 };
+        let sign = if y0 > y1 { 1.0 } else { -1.0 };
 
         let deg =
             if vis != 0 && real != 0 {
