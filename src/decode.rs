@@ -32,8 +32,8 @@ pub fn decode(img: &Lightness, points: Corners) -> Option<u8> {
 
         let id = CODES.iter().position(|&i| i == bin);
 
-        if let Some(idx) = id {
-            return Some(idx as u8);
+        if let Some(id) = id {
+            return Some(id as u8);
         }
 
         bits = rot90(bits);
