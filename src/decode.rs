@@ -17,7 +17,7 @@ const CODES: [u64; 11] = [
 ];
 
 pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
-    let tag = sample(img, corners);
+    let tag = sample(img, corners)?;
 
     let min = tag.fold(f32::INFINITY, |a, &b| a.min(b));
     let max = tag.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
@@ -46,7 +46,7 @@ fn rot90<T: Clone>(a: Array2<T>) -> Array2<T> {
     a.slice(s![..;-1, ..]).reversed_axes().to_owned()
 }
 
-fn sample(img: &Lightness, corners: Corners) -> Array2<f32> {
+fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
     let (tl, tr, bl, br) = corners;
 
     let points = partition(
@@ -59,9 +59,9 @@ fn sample(img: &Lightness, corners: Corners) -> Array2<f32> {
         3,
     );
 
-    let bits: Vec<f32> = points.iter().map(|pt| {
-        img[(pt.1 as usize, pt.0 as usize)]
-    }).collect();
+    let vals: Vec<&f32> = points.iter().map(|pt| {
+        img.get((pt.1 as usize, pt.0 as usize))
+    }).collect::<Option<Vec<&f32>>>()?;
 
     let dirs = [(0, 0), (1, 0), (0, 1), (1, 1)];
 
@@ -72,14 +72,15 @@ fn sample(img: &Lightness, corners: Corners) -> Array2<f32> {
         for (cx, cy) in &dirs {
             for (x, y) in &dirs {
                 let pos = x + cx * 2 + bx * 4 + (y + cy * 2 + by * 4) * 8;
-                out[pos] = bits[idx];
+                out[pos] = *vals[idx];
 
                 idx += 1;
             }
         }
     }
 
-    Array2::from_shape_vec((8, 8), out).unwrap().slice_move(s![1..7, 1..7])
+    let ary = Array2::from_shape_vec((8, 8), out).unwrap().slice_move(s![1..7, 1..7]);
+    Some(ary)
 }
 
 fn partition(corners: FCorners, depth: u32) -> Vec<FPoint> {
