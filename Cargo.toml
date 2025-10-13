@@ -8,8 +8,12 @@ ndarray = "0.16.1"
 num-complex = "0.4.6"
 rayon = "1.11.0"
 rustfft = "6.4.0"
+serde = { version = "1.0.228", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 image = "0.25.6"
 opencv = "0.95.0"
 rand = "0.9.1"
+
+[features]
+serde = ["dep:serde"]
