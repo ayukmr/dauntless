@@ -128,7 +128,7 @@ fn main() -> opencv::Result<()> {
     Ok(())
 }
 
-pub fn show_text(frame: &mut Mat, label: &str, x: i32, y: i32) -> opencv::Result<()> {
+fn show_text(frame: &mut Mat, label: &str, x: i32, y: i32) -> opencv::Result<()> {
     let size = imgproc::get_text_size(
         label,
         imgproc::FONT_HERSHEY_DUPLEX,

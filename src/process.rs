@@ -31,7 +31,7 @@ pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
     }).collect()
 }
 
-pub fn degrees(corners: Corners) -> i8 {
+fn degrees(corners: Corners) -> i8 {
     let (tl, tr, bl, br) = corners;
 
     let x0 = (tr.0 - tl.0) as f32;
@@ -55,7 +55,7 @@ pub fn degrees(corners: Corners) -> i8 {
     }
 }
 
-pub fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
+fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
     let (tl, tr, bl, br) = corners;
 
     let y0 = (bl.1 - tl.1) as f32;
@@ -75,7 +75,7 @@ pub fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
     (x, y, z)
 }
 
-pub fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
+fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
     let scale = -img_h / (2.0 * vis);
     let aspect = img_w / img_h;
 
