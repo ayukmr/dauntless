@@ -1,19 +1,36 @@
+use dauntless::Tag;
+
+use std::time::Instant;
 use ndarray::Array2;
 
 use opencv::{core, videoio, imgproc, highgui};
 use opencv::prelude::*;
 
 fn main() -> opencv::Result<()> {
-    let mut cam = videoio::VideoCapture::new(1, videoio::CAP_ANY)?;
+    let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
     highgui::named_window("webcam", highgui::WINDOW_AUTOSIZE)?;
 
+    let mut last = Instant::now();
+    let mut fps = 0.0;
+
     loop {
-        let mut frame = core::Mat::default();
+        let mut frame = Mat::default();
         cam.read(&mut frame)?;
 
         if frame.empty() {
             continue;
         }
+
+        let now = Instant::now();
+        let dt = now.duration_since(last).as_secs_f64();
+
+        last = now;
+
+        if dt > 0.0 {
+            fps = 0.9 * fps + 0.1 * (1.0 / dt);
+        }
+
+        show_text(&mut frame, &(fps as i32).to_string(), 20, 20)?;
 
         let mut light = Mat::default();
 
@@ -49,9 +66,11 @@ fn main() -> opencv::Result<()> {
             resized.data_bytes()?.to_vec(),
         ).unwrap().mapv(|l| l as f32) / 255.0;
 
-        let tags = dauntless::tags(data);
+        let tags = dauntless::tags(data.clone());
 
-        for (id, deg, (tl, tr, bl, br)) in tags {
+        for tag in tags {
+            let Tag { id, deg, corners: (tl, tr, bl, br) } = tag;
+
             let corners = [tl, tr, br, bl];
 
             let xs: Vec<u32> = corners.iter().map(|pt| pt.0).collect();
@@ -60,34 +79,17 @@ fn main() -> opencv::Result<()> {
             let x = (xs.iter().min().unwrap() + xs.iter().max().unwrap()) / 2;
             let y = (ys.iter().min().unwrap() + ys.iter().max().unwrap()) / 2;
 
-            let label =
-                if let Some(id) = id {
-                    format!("{}@{}*", id, deg.unwrap_or_default())
-                } else {
-                    format!("{}*", deg.unwrap_or_default())
-                };
+            let label = if let Some(id) = id {
+                format!("{}, {}", id, deg)
+            } else {
+                format!("{}", deg)
+            };
 
-            let size = imgproc::get_text_size(
-                &label,
-                imgproc::FONT_HERSHEY_DUPLEX,
-                0.65,
-                2,
-                &mut 0,
-            )?;
-
-            imgproc::put_text(
+            show_text(
                 &mut frame,
                 &label,
-                core::Point::new(
-                    (x as f32 / scale) as i32 - size.width / 2,
-                    (y as f32 / scale) as i32 + size.height / 2,
-                ),
-                imgproc::FONT_HERSHEY_DUPLEX,
-                0.65,
-                core::Scalar::new(0.0, 0.0, 255.0, 0.0),
-                2,
-                imgproc::LINE_8,
-                false,
+                (x as f32 / scale) as i32,
+                (y as f32 / scale) as i32,
             )?;
 
             for i in 0..4 {
@@ -118,10 +120,35 @@ fn main() -> opencv::Result<()> {
 
         highgui::imshow("webcam", &frame)?;
 
-        if highgui::wait_key(10)? == 27 {
+        if highgui::wait_key(1)? == 27 {
             break;
         }
     }
 
     Ok(())
+}
+
+pub fn show_text(frame: &mut Mat, label: &str, x: i32, y: i32) -> opencv::Result<()> {
+    let size = imgproc::get_text_size(
+        label,
+        imgproc::FONT_HERSHEY_DUPLEX,
+        0.65,
+        2,
+        &mut 0,
+    )?;
+
+    imgproc::put_text(
+        frame,
+        &label,
+        core::Point::new(
+            x - size.width / 2,
+            y + size.height / 2,
+        ),
+        imgproc::FONT_HERSHEY_DUPLEX,
+        0.65,
+        core::Scalar::new(0.0, 0.0, 255.0, 0.0),
+        2,
+        imgproc::LINE_8,
+        false,
+    )
 }

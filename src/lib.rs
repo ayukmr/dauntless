@@ -7,8 +7,9 @@ mod tags;
 mod decode;
 mod process;
 
-use types::{Lightness, Corners};
+pub use types::Tag;
+use types::{Lightness};
 
-pub fn tags(data: Lightness) -> Vec<(Option<u32>, i8, Corners)> {
+pub fn tags(data: Lightness) -> Vec<Tag> {
     process::process(data)
 }

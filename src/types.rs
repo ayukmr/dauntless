@@ -1,6 +1,13 @@
 use ndarray::Array2;
 use num_complex::Complex;
 
+#[derive(Debug)]
+pub struct Tag {
+    pub id: Option<u32>,
+    pub deg: i8,
+    pub corners: Corners,
+}
+
 pub type Lightness = Array2<f32>;
 pub type Frequency = Array2<Complex<f32>>;
 pub type Mask = Array2<bool>;

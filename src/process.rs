@@ -1,9 +1,9 @@
 use crate::{mask, tags, decode};
-use crate::types::{Corners, Lightness};
+use crate::types::{Tag, Lightness};
 
 use rayon::prelude::*;
 
-pub fn process(data: Lightness) -> Vec<(Option<u32>, i8, Corners)> {
+pub fn process(data: Lightness) -> Vec<Tag> {
     let edges = mask::canny(&data);
     let corners = mask::harris(&data);
 
@@ -40,6 +40,6 @@ pub fn process(data: Lightness) -> Vec<(Option<u32>, i8, Corners)> {
                 0
             };
 
-        (id, deg, corners)
+        Tag { id, deg, corners }
     }).collect()
 }
