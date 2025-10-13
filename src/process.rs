@@ -47,7 +47,7 @@ fn rotation(corners: Corners) -> f32 {
     let sign = if y0 > y1 { 1.0 } else { -1.0 };
 
     if vis != 0.0 && real != 0.0 {
-        (vis / real).acos() * sign
+        (vis / real).clamp(-1.0, 1.0).acos() * sign
     } else {
         0.0
     }
@@ -74,7 +74,7 @@ fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
 }
 
 fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
-    let scale = img_h / (2.0 * vis);
+    let scale = img_h / (2.0 * vis) * 0.2;
     let aspect = img_w / img_h;
 
     let x = point.0 / img_w * 2.0 - 1.0;
