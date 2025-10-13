@@ -7,8 +7,8 @@ mod tags;
 mod decode;
 mod process;
 
-pub use types::Tag;
-use types::{Filter, Lightness};
+pub use types::{Filter, Tag};
+use types::Lightness;
 
 pub fn tags(data: Lightness) -> Vec<Tag> {
     process::process(
