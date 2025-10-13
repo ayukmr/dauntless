@@ -6,6 +6,7 @@ use num_complex::Complex;
 pub struct Tag {
     pub id: Option<u32>,
     pub deg: i8,
+    pub pos: Point3D,
     pub corners: Corners,
 }
 
@@ -33,3 +34,6 @@ pub type Shapes = Vec<Points>;
 
 pub type FPoint = (f32, f32);
 pub type FCorners = (FPoint, FPoint, FPoint, FPoint);
+
+pub type Point2D = (f32, f32);
+pub type Point3D = (f32, f32, f32);

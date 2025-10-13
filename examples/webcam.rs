@@ -69,7 +69,7 @@ fn main() -> opencv::Result<()> {
         let tags = dauntless::tags(data.clone());
 
         for tag in tags {
-            let Tag { id, deg, corners: (tl, tr, bl, br) } = tag;
+            let Tag { id, deg, pos, corners: (tl, tr, bl, br) } = tag;
 
             let corners = [tl, tr, br, bl];
 
@@ -80,7 +80,7 @@ fn main() -> opencv::Result<()> {
             let y = (ys.iter().min().unwrap() + ys.iter().max().unwrap()) / 2;
 
             let label = if let Some(id) = id {
-                format!("{}, {}", id, deg)
+                format!("{}, {}, {:?}", id, deg, pos)
             } else {
                 format!("{}", deg)
             };
