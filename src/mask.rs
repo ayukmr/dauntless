@@ -55,7 +55,7 @@ pub fn harris(img: &Lightness) -> Mask {
         let y1 = usize::min(y + HARRIS_NEARBY, h - 1);
 
         let patch = resp.slice(s![y0..=y1, x0..=x1]);
-        let max = patch.iter().cloned().reduce(f32::max).unwrap();
+        let max = patch.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 
         if resp[[y, x]] == max {
             mask[[y, x]] = true;

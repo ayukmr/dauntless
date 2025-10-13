@@ -47,7 +47,7 @@ pub fn nms(mag: &Lightness, orient: &Lightness) -> Lightness {
 }
 
 pub fn hysteresis(edges: &Lightness) -> Mask {
-    let max = edges.iter().cloned().reduce(f32::max).unwrap();
+    let max = edges.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
     let norm = edges / max;
 
     let strong = norm.mapv(|v| v > HYST_HIGH_T);
