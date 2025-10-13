@@ -24,14 +24,14 @@ pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
 
         let id = decode::decode(&data, corners);
 
-        let deg = degrees(corners);
+        let rot = rotation(corners);
         let pos = pos(corners, img_w as f32, img_h as f32);
 
-        Tag { id, deg, pos, corners }
+        Tag { id, rot, pos, corners }
     }).collect()
 }
 
-fn degrees(corners: Corners) -> i8 {
+fn rotation(corners: Corners) -> f32 {
     let (tl, tr, bl, br) = corners;
 
     let x0 = (tr.0 - tl.0) as f32;
@@ -47,11 +47,9 @@ fn degrees(corners: Corners) -> i8 {
     let sign = if y0 > y1 { 1.0 } else { -1.0 };
 
     if vis != 0.0 && real != 0.0 {
-        let deg = (vis / real).acos() * (180.0 / std::f32::consts::PI);
-
-        (deg * sign) as i8
+        (vis / real).acos() * sign
     } else {
-        0
+        0.0
     }
 }
 

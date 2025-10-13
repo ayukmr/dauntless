@@ -5,7 +5,7 @@ use num_complex::Complex;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tag {
     pub id: Option<u32>,
-    pub deg: i8,
+    pub rot: f32,
     pub pos: Point3D,
     pub corners: Corners,
 }
