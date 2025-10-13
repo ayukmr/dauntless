@@ -66,7 +66,7 @@ fn main() -> opencv::Result<()> {
             resized.data_bytes()?.to_vec(),
         ).unwrap().mapv(|l| l as f32) / 255.0;
 
-        let tags = dauntless::tags(data.clone());
+        let tags = dauntless::tags(data);
 
         for tag in tags {
             let Tag { id, deg, pos, corners: (tl, tr, bl, br) } = tag;
