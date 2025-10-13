@@ -1,13 +1,13 @@
 use crate::{mask, tags, decode};
-use crate::types::{Tag, Lightness};
+use crate::types::{Filter, Lightness, Tag};
 
 use rayon::prelude::*;
 
-pub fn process(data: Lightness) -> Vec<Tag> {
+pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
     let edges = mask::canny(&data);
     let corners = mask::harris(&data);
 
-    let tags = tags::tags(&edges, &corners);
+    let tags = tags::tags(&edges, &corners, filter);
 
     tags.into_par_iter().map(|pts| {
         let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();

@@ -9,6 +9,12 @@ pub struct Tag {
     pub corners: Corners,
 }
 
+pub struct Filter {
+    pub quads: bool,
+    pub paras: bool,
+    pub enclosed: bool,
+}
+
 pub type Lightness = Array2<f32>;
 pub type Frequency = Array2<Complex<f32>>;
 pub type Mask = Array2<bool>;
