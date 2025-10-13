@@ -3,7 +3,7 @@ use crate::types::{Corners, Lightness};
 
 use rayon::prelude::*;
 
-pub fn process(data: Lightness) -> Vec<(Option<u8>, Option<i8>, Corners)> {
+pub fn process(data: Lightness) -> Vec<(Option<u32>, i8, Corners)> {
     let edges = mask::canny(&data);
     let corners = mask::harris(&data);
 
@@ -35,9 +35,9 @@ pub fn process(data: Lightness) -> Vec<(Option<u8>, Option<i8>, Corners)> {
             if vis != 0 && real != 0 {
                 let deg = (vis as f32 / real as f32).acos() * (180.0 / std::f32::consts::PI);
 
-                Some((deg * sign) as i8)
+                (deg * sign) as i8
             } else {
-                None
+                0
             };
 
         (id, deg, corners)
