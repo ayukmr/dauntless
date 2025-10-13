@@ -74,15 +74,15 @@ fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
 }
 
 fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
-    let scale = -img_h / (2.0 * vis);
+    let scale = img_h / (2.0 * vis);
     let aspect = img_w / img_h;
 
     let x = point.0 / img_w * 2.0 - 1.0;
     let y = point.1 / img_h * 2.0 - 1.0;
 
     (
-        x * scale * aspect * -1.0,
-        y * scale,
-        scale / HALF_FOV.tan() * -1.0,
+        x * scale * aspect,
+        -y * scale,
+        scale / HALF_FOV.tan(),
     )
 }
