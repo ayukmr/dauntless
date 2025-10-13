@@ -1,7 +1,7 @@
 use ndarray::Array2;
 use num_complex::Complex;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tag {
     pub id: Option<u32>,
