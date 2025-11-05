@@ -9,8 +9,10 @@ const HALF_FOV: f32 = FOV.to_radians() / 2.0;
 pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
     let freq = fft::to_freq(&data);
 
-    let edges = mask::canny(&freq);
-    let corners = mask::harris(&freq);
+    let (edges, corners) = rayon::join(
+        || mask::canny(&freq),
+        || mask::harris(&freq),
+    );
 
     let tags = tags::tags(&edges, &corners, filter);
 
