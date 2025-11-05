@@ -29,29 +29,27 @@ pub fn blur(freq: &Frequency) -> Frequency {
 }
 
 pub fn sobel(freq: &Frequency) -> (Frequency, Frequency) {
-    let sobel_x =
-        SX.get_or_init(|| {
-            create_kernel(
-                vec![
-                    -1., 0., 1.,
-                    -2., 0., 2.,
-                    -1., 0., 1.,
-                ],
-                freq.dim()
-            )
-        });
+    let sobel_x = SX.get_or_init(|| {
+        create_kernel(
+            vec![
+                -1., 0., 1.,
+                -2., 0., 2.,
+                -1., 0., 1.,
+            ],
+            freq.dim()
+        )
+    });
 
-    let sobel_y =
-        SY.get_or_init(|| {
-            create_kernel(
-                vec![
-                    -1., -2., -1.,
-                     0.,  0.,  0.,
-                     1.,  2.,  1.,
-                ],
-                freq.dim()
-            )
-        });
+    let sobel_y = SY.get_or_init(|| {
+        create_kernel(
+            vec![
+                -1., -2., -1.,
+                 0.,  0.,  0.,
+                 1.,  2.,  1.,
+            ],
+            freq.dim()
+        )
+    });
 
     let x = freq * sobel_x;
     let y = freq * sobel_y;

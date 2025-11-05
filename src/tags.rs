@@ -188,8 +188,7 @@ fn filter_paras(quads: Shapes) -> Shapes {
 
 fn filter_enclosed(quads: Shapes) -> Shapes {
     quads.clone().into_par_iter().filter(|pts| {
-        let (x0s, y0s): (Vec<u32>, Vec<u32>) =
-            pts.iter().cloned().unzip();
+        let (x0s, y0s): (Vec<u32>, Vec<u32>) = pts.iter().cloned().unzip();
 
         let x00 = x0s.iter().min();
         let x01 = x0s.iter().max();
@@ -202,8 +201,7 @@ fn filter_enclosed(quads: Shapes) -> Shapes {
                 return false;
             }
 
-            let (x1s, y1s): (Vec<u32>, Vec<u32>) =
-                others.iter().cloned().unzip();
+            let (x1s, y1s): (Vec<u32>, Vec<u32>) = others.iter().cloned().unzip();
 
             let x10 = x1s.iter().min();
             let x11 = x1s.iter().max();
