@@ -1,4 +1,4 @@
-use crate::{mask, tags, decode};
+use crate::{decode, fft, mask, tags};
 use crate::types::{Tag, Corners, Point2D, Point3D, Filter, Lightness};
 
 use rayon::prelude::*;
@@ -7,8 +7,10 @@ const FOV: f32 = 40.0;
 const HALF_FOV: f32 = FOV.to_radians() / 2.0;
 
 pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
-    let edges = mask::canny(&data);
-    let corners = mask::harris(&data);
+    let freq = fft::to_freq(&data);
+
+    let edges = mask::canny(&freq);
+    let corners = mask::harris(&freq);
 
     let tags = tags::tags(&edges, &corners, filter);
 

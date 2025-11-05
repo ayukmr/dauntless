@@ -1,5 +1,5 @@
-use crate::types::{Lightness, Mask};
-use crate::{oper, post};
+use crate::types::{Frequency, Mask};
+use crate::{fft, oper, post};
 
 use ndarray::{s, Array2, Zip};
 
@@ -7,16 +7,32 @@ const HARRIS_K: f32 = 0.01;
 const HARRIS_THRESH: f32 = 0.2;
 const HARRIS_NEARBY: usize = 3;
 
-pub fn canny(img: &Lightness) -> Mask {
-    let blur = oper::blur(img);
-    let (x, y) = oper::sobel(&blur);
+pub fn canny(freq: &Frequency) -> Mask {
+    let blur = oper::blur(freq);
+    let (fx, fy) = oper::sobel(&blur);
+
+    let x = fft::from_freq(&fx);
+    let y = fft::from_freq(&fy);
 
     let mag = (x.powi(2) + y.powi(2)).mapv(f32::sqrt);
 
     let orient =
-        Zip::from(&y)
-            .and(&x)
-            .map_collect(|&y, &x| f32::atan2(y, x));
+        Zip::from(&x)
+            .and(&y)
+            .map_collect(|&gx, &gy| {
+                let ax = gx.abs();
+                let ay = gy.abs();
+
+                if ay <= ax * 0.4142 {
+                    (1, 0)
+                } else if ay >= ax * 2.4142 {
+                    (1, 1)
+                } else if gx * gy > 0.0 {
+                    (0, 1)
+                } else {
+                    (1, -1)
+                }
+            });
 
     let supp = post::nms(&mag, &orient);
     let mask = post::hysteresis(&supp);
@@ -24,16 +40,19 @@ pub fn canny(img: &Lightness) -> Mask {
     mask
 }
 
-pub fn harris(img: &Lightness) -> Mask {
-    let (x, y) = oper::sobel(img);
+pub fn harris(freq: &Frequency) -> Mask {
+    let (fx, fy) = oper::sobel(freq);
+
+    let x = fft::from_freq(&fx);
+    let y = fft::from_freq(&fy);
 
     let xx = x.powi(2);
     let yy = y.powi(2);
     let xy = x * y;
 
-    let sxx = oper::blur(&xx);
-    let syy = oper::blur(&yy);
-    let sxy = oper::blur(&xy);
+    let sxx = fft::from_freq(&oper::blur(&fft::to_freq(&xx)));
+    let syy = fft::from_freq(&oper::blur(&fft::to_freq(&yy)));
+    let sxy = fft::from_freq(&oper::blur(&fft::to_freq(&xy)));
 
     let det = &sxx * &syy - sxy.powi(2);
     let trace = sxx + syy;

@@ -1,6 +1,8 @@
 use crate::types::{Lightness, Frequency};
 
-use ndarray::{s, Array1, Array2};
+use rayon::prelude::*;
+
+use ndarray::{Array1, Array2, Axis};
 
 use num_complex::Complex;
 use rustfft::FftPlanner;
@@ -42,19 +44,23 @@ fn fft2(data: &Frequency, inverse: bool) -> Frequency {
 
     let mut data = data.clone();
 
-    for x in 0..w {
-        let mut col = data.slice(s![.., x]).to_vec();
-        f_col.process(&mut col);
+    data.axis_iter_mut(Axis(1))
+        .into_par_iter()
+        .for_each(|mut col| {
+            let mut v = col.to_vec();
+            f_col.process(&mut v);
 
-        data.slice_mut(s![.., x]).assign(&Array1::from(col));
-    }
+            col.assign(&Array1::from(v));
+        });
 
-    for y in 0..h {
-        let mut row = data.slice(s![y, ..]).to_vec();
-        f_row.process(&mut row);
+    data.axis_iter_mut(Axis(0))
+        .into_par_iter()
+        .for_each(|mut row| {
+            let mut v = row.to_vec();
+            f_row.process(&mut v);
 
-        data.slice_mut(s![y, ..]).assign(&Array1::from(row));
-    }
+            row.assign(&Array1::from(v));
+        });
 
     if inverse {
         let scale = (h * w) as f32;

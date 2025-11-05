@@ -5,28 +5,15 @@ use ndarray::{s, Array2, Zip};
 const HYST_LOW_T: f32 = 0.05;
 const HYST_HIGH_T: f32 = 0.3;
 
-pub fn nms(mag: &Lightness, orient: &Lightness) -> Lightness {
+pub fn nms(mag: &Lightness, orient: &Array2<(i32, i32)>) -> Lightness {
     let (h, w) = mag.dim();
 
     Zip::indexed(mag)
         .and(orient)
-        .map_collect(|(y, x), &cur, &orient| {
+        .map_collect(|(y, x), &cur, (dx, dy)| {
             if x == 0 || y == 0 || x == w - 1 || y == h - 1 {
                 return 0.0;
             }
-
-            let angle = orient * 180.0 / std::f32::consts::PI;
-
-            let (dx, dy) =
-                if (-112.5..-67.5).contains(&angle) || (67.5..112.5).contains(&angle) {
-                    (0, 1)
-                } else if (-67.5..-22.5).contains(&angle) || (112.5..157.5).contains(&angle) {
-                    (1, -1)
-                } else if (22.5..67.5).contains(&angle) || (-157.5..-112.5).contains(&angle) {
-                    (1, 1)
-                } else {
-                    (1, 0)
-                };
 
             let n1 = mag[[
                 (y as i32 - dy) as usize,

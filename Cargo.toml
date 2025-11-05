@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ndarray = "0.16.1"
+ndarray = { version = "0.16.1", features = ["rayon"] }
 num-complex = "0.4.6"
+once_cell = "1.21.3"
 rayon = "1.11.0"
 rustfft = "6.4.0"
 serde = { version = "1.0.228", optional = true, features = ["derive"] }
