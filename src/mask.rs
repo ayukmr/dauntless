@@ -4,7 +4,7 @@ use crate::{fft, oper, post};
 use ndarray::{s, Array2, Zip};
 
 const HARRIS_K: f32 = 0.01;
-const HARRIS_THRESH: f32 = 0.2;
+const HARRIS_THRESH: f32 = 0.05;
 const HARRIS_NEARBY: usize = 3;
 
 pub fn canny(freq: &Frequency) -> Mask {

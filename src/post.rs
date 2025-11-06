@@ -2,8 +2,8 @@ use crate::types::{Lightness, Mask};
 
 use ndarray::{s, Array2, Zip};
 
-const HYST_LOW_T: f32 = 0.05;
-const HYST_HIGH_T: f32 = 0.3;
+const HYST_LOW_T: f32 = 0.0125;
+const HYST_HIGH_T: f32 = 0.05;
 
 pub fn nms(mag: &Lightness, orient: &Array2<(i32, i32)>) -> Lightness {
     let (h, w) = mag.dim();

@@ -2,6 +2,8 @@ use crate::types::{Lightness, Corners, FPoint, FCorners};
 
 use ndarray::{s, Array2};
 
+const BIT_THRESH: f32 = 0.5;
+
 const CODES: [u64; 11] = [
     57401312644,
     58383764297,
@@ -22,7 +24,7 @@ pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
     let min = tag.fold(f32::INFINITY, |a, &b| a.min(b));
     let max = tag.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 
-    let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > 0.75);
+    let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > BIT_THRESH);
 
     for _ in 0..4 {
         let bin =

@@ -3,7 +3,7 @@ use crate::types::{Tag, Corners, Point2D, Point3D, Filter, Lightness};
 
 use rayon::prelude::*;
 
-const FOV: f32 = 40.0;
+const FOV: f32 = 75.0;
 const HALF_FOV: f32 = FOV.to_radians() / 2.0;
 
 pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
