@@ -1,12 +1,10 @@
 use crate::{decode, fft, mask, tags};
-use crate::types::{Tag, Corners, Point2D, Point3D, Filter, Lightness};
+use crate::types::{Corners, Lightness, Mask, Point2D, Point3D, Tag};
+use crate::config::cfg;
 
 use rayon::prelude::*;
 
-const FOV: f32 = 75.0;
-const HALF_FOV: f32 = FOV.to_radians() / 2.0;
-
-pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
+pub fn process(data: Lightness) -> (Mask, Vec<Tag>) {
     let freq = fft::to_freq(&data);
 
     let (edges, corners) = rayon::join(
@@ -14,11 +12,11 @@ pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
         || mask::harris(&freq),
     );
 
-    let tags = tags::tags(&edges, &corners, filter);
+    let shapes = tags::tags(&edges, &corners);
 
     let (img_h, img_w) = data.dim();
 
-    tags.into_par_iter().map(|pts| {
+    let tags = shapes.into_par_iter().map(|pts| {
         let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
         let tr = *pts.iter().min_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
         let bl = *pts.iter().max_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
@@ -32,7 +30,9 @@ pub fn process(data: Lightness, filter: Filter) -> Vec<Tag> {
         let pos = pos(corners, img_w as f32, img_h as f32);
 
         Tag { id, rot, pos, corners }
-    }).collect()
+    }).collect();
+
+    (edges, tags)
 }
 
 fn rotation(corners: Corners) -> f32 {
@@ -87,6 +87,6 @@ fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
     (
         x * scale * aspect,
         -y * scale,
-        scale / HALF_FOV.tan(),
+        scale / cfg().half_fov.tan(),
     )
 }
