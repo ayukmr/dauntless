@@ -1,40 +1,37 @@
-use crate::types::{Mask, Point, Points, Shapes};
+use crate::types::{Corners, Mask, Point, Points, Shapes};
 use crate::config::cfg;
 
 use rayon::prelude::*;
 
-use std::collections::{HashMap, HashSet};
-use ndarray::{s, Array1, Array2};
+use ndarray::Array2;
 
-const SEG_THRESH: f32 = 1.5;
 const PARA_THRESH: f32 = 0.75;
 
 pub fn tags(edges: &Mask, corners: &Mask) -> Shapes {
-    let mut shapes = find_shapes(edges, corners);
+    let shapes = find_shapes(edges, corners);
+    let mut res = filter_quads(shapes);
 
-    if cfg().filter_quads {
-        shapes = filter_quads(shapes);
-    }
     if cfg().filter_paras {
-        shapes = filter_paras(shapes);
+        res = filter_paras(res);
     }
     if cfg().filter_enclosed {
-        shapes = filter_enclosed(shapes);
+        res = filter_enclosed(res);
     }
 
-    shapes
+    res
 }
 
-fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
+fn find_shapes(edges: &Mask, corners: &Mask) -> Vec<Points> {
     let mut corners = corners.clone();
-    let mut annot = Array2::zeros(edges.dim());
 
-    let mut res: HashMap<u32, Points> = HashMap::new();
-    let mut merge = HashSet::new();
+    let mut labels = Array2::from_elem(edges.dim(), None);
+    let mut label_pts = vec![Vec::new()];
 
-    let mut next_id = 1;
+    let mut next_label = 0;
 
     let (h, w) = edges.dim();
+
+    let mut uf = UnionFind::new();
 
     for y in 2..h - 2 {
         for x in 2..w - 2 {
@@ -42,97 +39,157 @@ fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                 continue;
             }
 
-            let patch = annot.slice(s![y - 2..=y + 2, x - 2..=x + 2]);
+            let mut id = None;
 
-            let ids: Vec<u32> =
-                patch
-                    .iter()
-                    .filter(|&&id| id != 0)
-                    .cloned()
-                    .collect();
+            for yy in (y - 2)..=(y + 2) {
+                for xx in (x - 2)..=(x + 2) {
+                    let nid = labels[[yy, xx]];
 
-            let id =
-                if !ids.is_empty() {
-                    for i0 in &ids {
-                        for i1 in &ids {
-                            if i0 != i1 && i0 < i1 {
-                                merge.insert((*i0, *i1));
-                            }
+                    if let Some(nid) = nid {
+                        if let Some(id) = id {
+                            uf.unite(id, nid);
+                        } else {
+                            id = Some(nid);
                         }
                     }
-
-                    ids[0]
-                } else {
-                    next_id += 1;
-                    next_id
-                };
-
-            let patch = corners.slice(s![y - 1..=y + 1, x - 1..=x + 1]);
-
-            let corner =
-                patch
-                    .indexed_iter()
-                    .find_map(|(i, &c)| c.then_some(i));
-
-            if let Some((py, px)) = corner {
-                let cx = x - 1 + px;
-                let cy = y - 1 + py;
-
-                res.entry(id).or_default().push((cx as u32, cy as u32));
-                corners[[cy, cx]] = false;
+                }
             }
 
-            annot[[y, x]] = id;
+            let id = match id {
+                Some(v) => v,
+                None => {
+                    next_label += 1;
+                    uf.push(next_label);
+                    label_pts.push(Vec::new());
+                    next_label
+                }
+            };
+            labels[[y, x]] = Some(id);
+
+            let mut corner = None;
+
+            for yy in (y - 1)..=(y + 1) {
+                for xx in (x - 1)..=(x + 1) {
+                    if corners[[yy, xx]] {
+                        corner = Some((yy, xx));
+                        break;
+                    }
+                }
+                if corner.is_some() {
+                    break;
+                }
+            }
+
+            if let Some((cy, cx)) = corner {
+                label_pts[id as usize].push((cx as u32, cy as u32));
+                corners[[cy, cx]] = false;
+            }
         }
     }
 
-    let mut merge: Points = merge.into_iter().collect();
-    merge.sort();
+    let mut merged = vec![Vec::new(); (next_label as usize) + 1];
 
-    for (i0, i1) in merge {
-        let c0 = res.remove(&i0).unwrap_or_default();
-        let c1 = res.remove(&i1).unwrap_or_default();
-
-        let mut merged = c0;
-        merged.extend(c1);
-
-        res.insert(i1, merged);
+    for id in 1..=next_label {
+        let root = uf.find(id);
+        let pts = &label_pts[id as usize];
+        merged[root as usize].extend(pts);
     }
 
-    res.into_values().filter(|pts| !pts.is_empty()).collect()
+    merged
+        .into_iter()
+        .filter(|pts| !pts.is_empty())
+        .collect()
 }
 
-fn filter_quads(shapes: Shapes) -> Shapes {
+struct UnionFind {
+    parent: Vec<u32>,
+    height: Vec<u32>,
+}
+
+impl UnionFind {
+    pub fn new() -> Self {
+        Self {
+            parent: vec![0],
+            height: vec![1]
+        }
+    }
+
+    pub fn push(&mut self, x: u32) {
+        self.parent.push(x);
+        self.height.push(1);
+    }
+
+    pub fn find(&mut self, x: u32) -> u32 {
+        let xi = x as usize;
+        let p = self.parent[xi];
+
+        if p != x {
+            self.parent[xi] = self.find(p);
+        }
+        self.parent[xi]
+    }
+
+    pub fn unite(&mut self, x: u32, y: u32) {
+        let xr = self.find(x);
+        let yr = self.find(y);
+
+        if xr == yr {
+            return;
+        }
+        let xi = xr as usize;
+        let yi = yr as usize;
+
+        if self.height[yi] > self.height[xi] {
+            self.parent[xi] = yr;
+            self.height[yi] += self.height[xi];
+        } else {
+            self.parent[yi] = xr;
+            self.height[xi] += self.height[yi];
+        }
+    }
+}
+
+fn filter_quads(shapes: Vec<Points>) -> Shapes {
     shapes
         .into_par_iter()
         .filter_map(|pts| {
-            let count = pts.len();
+            if pts.len() < 4 {
+                return None;
+            }
 
-            if count >= 4 {
-                let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
-                let tr = *pts.iter().min_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
-                let bl = *pts.iter().max_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
-                let br = *pts.iter().max_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
+            let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
+            let tr = *pts.iter().min_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
+            let bl = *pts.iter().max_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
+            let br = *pts.iter().max_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
 
-                let outer = vec![tl, tr, bl, br];
+            if tl == tr || tl == bl || tl == br || tr == bl || tr == br || bl == br {
+                return None;
+            }
 
-                let mut counted: Points =
-                    pts
-                        .into_par_iter()
-                        .filter(|pt| {
-                            !outer.contains(pt) &&
-                            !on_segment(pt, &tl, &tr) &&
-                            !on_segment(pt, &tr, &br) &&
-                            !on_segment(pt, &br, &bl) &&
-                            !on_segment(pt, &bl, &tl)
-                        })
-                        .collect();
+            Some((tl, tr, bl, br))
+        })
+        .collect()
+}
 
-                counted.extend(outer);
+fn filter_paras(quads: Shapes) -> Shapes {
+    quads
+        .into_par_iter()
+        .filter_map(|corners| {
+            let (tl, tr, bl, br) = corners;
+            let t = dist(&tl, &tr);
+            let b = dist(&bl, &br);
+            let l = dist(&tl, &bl);
+            let r = dist(&tr, &br);
 
-                Some(counted)
-            } else if count == 4 {
-                Some(pts)
+            if t == 0.0 || b == 0.0 || l == 0.0 || r == 0.0 {
+                return None;
+            }
+
+            let hd = (t / b).abs();
+            let vd = (l / r).abs();
+
+            if (hd - 1.0).abs() + (vd - 1.0).abs() < PARA_THRESH {
+                Some(corners)
             } else {
                 None
             }
@@ -140,77 +197,50 @@ fn filter_quads(shapes: Shapes) -> Shapes {
         .collect()
 }
 
-fn on_segment(p: &Point, a: &Point, b: &Point) -> bool {
-    let p = Array1::from_vec(vec![p.0 as f32, p.1 as f32]);
-    let a = Array1::from_vec(vec![a.0 as f32, a.1 as f32]);
-    let b = Array1::from_vec(vec![b.0 as f32, b.1 as f32]);
+fn dist(a: &Point, b: &Point) -> f32 {
+    let dx = a.0 as f32 - b.0 as f32;
+    let dy = a.1 as f32 - b.1 as f32;
 
-    let ab = &b - &a;
-    let ap = &p - &a;
-
-    let cross = ab[0] * ap[1] - ab[1] * ap[0];
-    let norm = f32::sqrt(ab[0].powi(2) + ab[1].powi(2));
-
-    if cross > SEG_THRESH * norm {
-        return false;
-    }
-
-    ap.dot(&ab) <= ab.dot(&ab)
-}
-
-fn filter_paras(quads: Shapes) -> Shapes {
-    quads.into_par_iter().filter_map(|pts| {
-        let mut h = pts.clone();
-        h.sort_by_key(|p| (p.0, p.1));
-
-        let mut v = pts.clone();
-        v.sort_by_key(|p| (p.1, p.0));
-
-        let hd0 = v[0].0 as f32 - v[1].0 as f32;
-        let hd1 = v[2].0 as f32 - v[3].0 as f32;
-
-        let vd0 = h[0].1 as f32 - h[1].1 as f32;
-        let vd1 = h[2].1 as f32 - h[3].1 as f32;
-
-        if hd0 == 0.0 || hd1 == 0.0 || vd0 == 0.0 || vd1 == 0.0 {
-            return None;
-        }
-
-        let h_diff = (hd0 / hd1).abs();
-        let v_diff = (vd0 / vd1).abs();
-
-        if (h_diff - 1.0).abs() + (v_diff - 1.0).abs() < PARA_THRESH {
-            Some(pts)
-        } else {
-            None
-        }
-    }).collect()
+    (dx * dx + dy * dy).sqrt()
 }
 
 fn filter_enclosed(quads: Shapes) -> Shapes {
-    quads.clone().into_par_iter().filter(|pts| {
-        let (x0s, y0s): (Vec<u32>, Vec<u32>) = pts.iter().cloned().unzip();
+    let bds: Vec<Bounds> = quads.iter().map(bounds).collect();
 
-        let x00 = x0s.iter().min();
-        let x01 = x0s.iter().max();
+    quads
+        .into_par_iter()
+        .enumerate()
+        .filter(|(idx, _)| {
+            let bd = &bds[*idx];
 
-        let y00 = y0s.iter().min();
-        let y01 = y0s.iter().max();
-
-        !quads.par_iter().any(|others| {
-            if others == pts {
-                return false;
-            }
-
-            let (x1s, y1s): (Vec<u32>, Vec<u32>) = others.iter().cloned().unzip();
-
-            let x10 = x1s.iter().min();
-            let x11 = x1s.iter().max();
-
-            let y10 = y1s.iter().min();
-            let y11 = y1s.iter().max();
-
-            x10 < x00 && x11 > x01 && y10 < y00 && y11 > y01
+            !bds
+                .iter()
+                .enumerate()
+                .any(|(j, o)| {
+                    if j == *idx {
+                        return false;
+                    }
+                    o.l < bd.l && o.r > bd.r && o.t < bd.t && o.b > bd.b
+                })
         })
-    }).collect()
+        .map(|(_i, pts)| pts)
+        .collect()
+}
+
+struct Bounds {
+    l: u32,
+    r: u32,
+    t: u32,
+    b: u32,
+}
+
+fn bounds(corners: &Corners) -> Bounds {
+    let (tl, tr, bl, br) = corners;
+
+    let l = u32::min(tl.0, bl.0);
+    let r = u32::max(tr.0, br.0);
+    let t = u32::min(tl.1, tr.1);
+    let b = u32::max(bl.1, br.1);
+
+    Bounds { l, r, t, b }
 }

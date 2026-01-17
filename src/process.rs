@@ -4,30 +4,22 @@ use crate::config::cfg;
 
 use rayon::prelude::*;
 
-pub fn process(data: Lightness) -> (Mask, Vec<Tag>) {
-    let freq = fft::to_freq(&data);
+pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
+    let freq = fft::to_freq(data);
 
-    let (edges, corners) = rayon::join(
-        || mask::canny(&freq),
-        || mask::harris(&freq),
-    );
+    let edges = mask::canny(&freq);
+    let corners = mask::harris(&freq);
 
     let shapes = tags::tags(&edges, &corners);
 
     let (img_h, img_w) = data.dim();
+    let half_fov_tan = cfg().half_fov.tan();
 
-    let tags = shapes.into_par_iter().map(|pts| {
-        let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
-        let tr = *pts.iter().min_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
-        let bl = *pts.iter().max_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
-        let br = *pts.iter().max_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
-
-        let corners = (tl, tr, bl, br);
-
+    let tags = shapes.into_par_iter().map(|corners| {
         let id = decode::decode(&data, corners);
 
         let rot = rotation(corners);
-        let pos = pos(corners, img_w as f32, img_h as f32);
+        let pos = pos(corners, img_w as f32, img_h as f32, half_fov_tan);
 
         Tag { id, rot, pos, corners }
     }).collect();
@@ -57,17 +49,17 @@ fn rotation(corners: Corners) -> f32 {
     }
 }
 
-fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
+fn pos(corners: Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
     let (tl, tr, bl, br) = corners;
 
     let y0 = (bl.1 - tl.1) as f32;
     let y1 = (br.1 - tr.1) as f32;
 
     let cnrs_3d = [
-        to_3d((tl.0 as f32, tl.1 as f32), y0, img_w, img_h),
-        to_3d((tr.0 as f32, tr.1 as f32), y1, img_w, img_h),
-        to_3d((bl.0 as f32, bl.1 as f32), y0, img_w, img_h),
-        to_3d((br.0 as f32, br.1 as f32), y1, img_w, img_h),
+        to_3d((tl.0 as f32, tl.1 as f32), y0, img_w, img_h, half_fov_tan),
+        to_3d((tr.0 as f32, tr.1 as f32), y1, img_w, img_h, half_fov_tan),
+        to_3d((bl.0 as f32, bl.1 as f32), y0, img_w, img_h, half_fov_tan),
+        to_3d((br.0 as f32, br.1 as f32), y1, img_w, img_h, half_fov_tan),
     ];
 
     let x = cnrs_3d.iter().map(|pt| pt.0).sum::<f32>() / 4.0;
@@ -77,7 +69,7 @@ fn pos(corners: Corners, img_w: f32, img_h: f32) -> Point3D {
     (x, y, z)
 }
 
-fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
+fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
     let scale = img_h / (2.0 * vis) * 0.2;
     let aspect = img_w / img_h;
 
@@ -87,6 +79,6 @@ fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32) -> Point3D {
     (
         x * scale * aspect,
         -y * scale,
-        scale / cfg().half_fov.tan(),
+        scale / half_fov_tan,
     )
 }

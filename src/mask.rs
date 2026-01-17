@@ -13,7 +13,10 @@ pub fn canny(freq: &Frequency) -> Mask {
     let x = fft::from_freq(&fx);
     let y = fft::from_freq(&fy);
 
-    let mag = (x.powi(2) + y.powi(2)).mapv(f32::sqrt);
+    let mag =
+        Zip::from(&x)
+            .and(&y)
+            .map_collect(|&gx, &gy| (gx * gx + gy * gy).sqrt());
 
     let orient =
         Zip::from(&x)
@@ -34,9 +37,7 @@ pub fn canny(freq: &Frequency) -> Mask {
             });
 
     let supp = post::nms(&mag, &orient);
-    let mask = post::hysteresis(&supp);
-
-    mask
+    post::hysteresis(&supp)
 }
 
 pub fn harris(freq: &Frequency) -> Mask {
@@ -53,14 +54,22 @@ pub fn harris(freq: &Frequency) -> Mask {
     let syy = fft::from_freq(&oper::blur(&fft::to_freq(&yy)));
     let sxy = fft::from_freq(&oper::blur(&fft::to_freq(&xy)));
 
-    let det = &sxx * &syy - sxy.powi(2);
-    let trace = sxx + syy;
-    let resp = det - cfg().harris_k * trace.powi(2);
+    let cfg = cfg();
+
+    let resp =
+        Zip::from(&sxx)
+            .and(&syy)
+            .and(&sxy)
+            .map_collect(|a, b, c| {
+                let det = a * b - c * c;
+                let trace = a + b;
+                det - cfg.harris_k * trace * trace
+            });
 
     let points =
         resp
             .indexed_iter()
-            .filter_map(|(i, &v)| (v > cfg().harris_thresh).then_some(i));
+            .filter_map(|(i, &v)| (v > cfg.harris_thresh).then_some(i));
 
     let mut mask = Array2::from_elem(resp.dim(), false);
     let (h, w) = resp.dim();

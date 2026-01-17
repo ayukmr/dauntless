@@ -44,8 +44,8 @@ fn main() -> opencv::Result<()> {
             core::AlgorithmHint::ALGO_HINT_DEFAULT,
         )?;
 
-        let h = light.rows();
         let w = light.cols();
+        let h = light.rows();
 
         let scale = 400.0 / i32::max(w, h) as f32;
 

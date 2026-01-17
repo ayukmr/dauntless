@@ -33,10 +33,13 @@ pub fn nms(mag: &Lightness, orient: &Array2<(i32, i32)>) -> Lightness {
 
 pub fn hysteresis(edges: &Lightness) -> Mask {
     let max = edges.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-    let norm = edges / max;
 
-    let strong = norm.mapv(|v| v > cfg().hyst_high);
-    let weak = norm.mapv(|v| v > cfg().hyst_low && v <= cfg().hyst_high);
+    let cfg = cfg();
+    let high = cfg.hyst_high * max;
+    let low = cfg.hyst_low * max;
+
+    let strong = edges.mapv(|v| v > high);
+    let weak = edges.mapv(|v| v > low && v <= high);
 
     Array2::from_shape_fn(edges.dim(), |(y, x)| {
         let str = strong[[y, x]];
@@ -47,7 +50,6 @@ pub fn hysteresis(edges: &Lightness) -> Mask {
         }
 
         let patch = strong.slice(s![y - 1..=y + 1, x - 1..=x + 1]);
-
         patch.iter().any(|&e| e)
     })
 }

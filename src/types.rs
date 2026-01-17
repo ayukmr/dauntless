@@ -18,7 +18,7 @@ pub type Point = (u32, u32);
 pub type Corners = (Point, Point, Point, Point);
 
 pub type Points = Vec<Point>;
-pub type Shapes = Vec<Points>;
+pub type Shapes = Vec<Corners>;
 
 pub type FPoint = (f32, f32);
 pub type FCorners = (FPoint, FPoint, FPoint, FPoint);

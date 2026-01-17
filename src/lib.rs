@@ -24,9 +24,9 @@ pub fn get_config() -> Config {
 }
 
 pub fn tags(data: Lightness) -> Vec<Tag> {
-    process::process(data).1
+    process::process(&data).1
 }
 
 pub fn tags2(data: Lightness) -> (Mask, Vec<Tag>) {
-    process::process(data)
+    process::process(&data)
 }
