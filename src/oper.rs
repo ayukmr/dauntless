@@ -36,9 +36,7 @@ fn blur_mask(dim: (usize, usize)) -> Array2<f32> {
             let sigma = BLUR_R * cmp::min(h, w) as f32;
 
             let dist = &ys.insert_axis(Axis(1)) + &xs.insert_axis(Axis(0));
-            let mask = (-dist / (2.0 * sigma.powi(2))).exp();
-
-            mask
+            (-dist / (2.0 * sigma.powi(2))).exp()
         })
         .clone()
 }

@@ -11,9 +11,7 @@ pub fn to_freq(data: &Lightness) -> Frequency {
     let complex = data.mapv(Complex::from);
 
     let freq = fft2(&complex, false);
-    let shifted = shift(&freq, false);
-
-    shifted
+    shift(&freq, false)
 }
 
 pub fn from_freq(freq: &Frequency) -> Lightness {

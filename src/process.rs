@@ -16,7 +16,7 @@ pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
     let half_fov_tan = cfg().half_fov.tan();
 
     let tags = shapes.into_par_iter().map(|corners| {
-        let id = decode::decode(&data, corners);
+        let id = decode::decode(data, corners);
 
         let rot = rotation(corners);
         let pos = pos(corners, img_w as f32, img_h as f32, half_fov_tan);
