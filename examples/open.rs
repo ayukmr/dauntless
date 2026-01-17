@@ -1,3 +1,4 @@
+use dauntless::Config;
 use ndarray::Array2;
 use image::imageops::{self, FilterType};
 
@@ -23,6 +24,8 @@ fn main() {
         (sh, sw),
         resized.into_vec(),
     ).unwrap().mapv(|l| l as f32) / 255.0;
+
+    dauntless::set_config(Config::default());
 
     let tags = dauntless::tags(data);
 
