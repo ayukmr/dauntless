@@ -13,7 +13,7 @@ serde = { version = "1.0.228", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 image = "0.25.6"
-opencv = "0.95.0"
+opencv = "0.97.2"
 rand = "0.9.1"
 
 [features]

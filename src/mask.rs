@@ -1,10 +1,9 @@
-use crate::types::{Frequency, Mask};
 use crate::{fft, oper, post};
+use crate::types::{Frequency, Mask};
+use crate::config::cfg;
 
 use ndarray::{s, Array2, Zip};
 
-const HARRIS_K: f32 = 0.01;
-const HARRIS_THRESH: f32 = 0.05;
 const HARRIS_NEARBY: usize = 3;
 
 pub fn canny(freq: &Frequency) -> Mask {
@@ -56,12 +55,12 @@ pub fn harris(freq: &Frequency) -> Mask {
 
     let det = &sxx * &syy - sxy.powi(2);
     let trace = sxx + syy;
-    let resp = det - HARRIS_K * trace.powi(2);
+    let resp = det - cfg().harris_k * trace.powi(2);
 
     let points =
         resp
             .indexed_iter()
-            .filter_map(|(i, &v)| (v > HARRIS_THRESH).then_some(i));
+            .filter_map(|(i, &v)| (v > cfg().harris_thresh).then_some(i));
 
     let mut mask = Array2::from_elem(resp.dim(), false);
     let (h, w) = resp.dim();

@@ -1,4 +1,5 @@
-use crate::types::{Filter, Mask, Point, Points, Shapes};
+use crate::types::{Mask, Point, Points, Shapes};
+use crate::config::cfg;
 
 use rayon::prelude::*;
 
@@ -8,16 +9,16 @@ use ndarray::{s, Array1, Array2};
 const SEG_THRESH: f32 = 1.5;
 const PARA_THRESH: f32 = 0.75;
 
-pub fn tags(edges: &Mask, corners: &Mask, filter: Filter) -> Shapes {
+pub fn tags(edges: &Mask, corners: &Mask) -> Shapes {
     let mut shapes = find_shapes(edges, corners);
 
-    if filter.quads {
+    if cfg().filter_quads {
         shapes = filter_quads(shapes);
     }
-    if filter.paras {
+    if cfg().filter_paras {
         shapes = filter_paras(shapes);
     }
-    if filter.enclosed {
+    if cfg().filter_enclosed {
         shapes = filter_enclosed(shapes);
     }
 

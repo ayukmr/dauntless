@@ -1,4 +1,4 @@
-use dauntless::Tag;
+use dauntless::{Config, Tag};
 
 use std::time::Instant;
 use ndarray::Array2;
@@ -12,6 +12,8 @@ fn main() -> opencv::Result<()> {
 
     let mut last = Instant::now();
     let mut fps = 0.0;
+
+    dauntless::set_config(Config::default());
 
     loop {
         let mut frame = Mat::default();
