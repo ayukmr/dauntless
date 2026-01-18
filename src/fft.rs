@@ -2,14 +2,25 @@ use crate::types::{Lightness, Frequency};
 
 use rayon::prelude::*;
 
+use std::sync::Arc;
+
 use ndarray::{Array1, Array2, Axis};
+use once_cell::sync::OnceCell;
 
 use num_complex::Complex;
-use rustfft::FftPlanner;
+use rustfft::{Fft, FftPlanner};
+
+struct Plans {
+    row_fwd: Arc<dyn Fft<f32> + Sync + Send>,
+    row_inv: Arc<dyn Fft<f32> + Sync + Send>,
+    col_fwd: Arc<dyn Fft<f32> + Sync + Send>,
+    col_inv: Arc<dyn Fft<f32> + Sync + Send>,
+}
+
+static PLANS: OnceCell<Arc<Plans>> = OnceCell::new();
 
 pub fn to_freq(data: &Lightness) -> Frequency {
     let complex = data.mapv(Complex::from);
-
     let freq = fft2(&complex, false);
     shift(&freq, false)
 }
@@ -17,28 +28,27 @@ pub fn to_freq(data: &Lightness) -> Frequency {
 pub fn from_freq(freq: &Frequency) -> Lightness {
     let shifted = shift(freq, true);
     let data = fft2(&shifted, true);
-
     data.mapv(|n| n.re)
 }
 
 fn fft2(data: &Frequency, inverse: bool) -> Frequency {
     let (h, w) = data.dim();
 
-    let mut planner = FftPlanner::new();
+    let plans =
+        PLANS
+            .get_or_init(|| {
+                let mut planner = FftPlanner::<f32>::new();
+                Arc::new(Plans {
+                    row_fwd: planner.plan_fft_forward(w),
+                    row_inv: planner.plan_fft_inverse(w),
+                    col_fwd: planner.plan_fft_forward(h),
+                    col_inv: planner.plan_fft_inverse(h),
+                })
+            })
+            .clone();
 
-    let f_col =
-        if inverse {
-            planner.plan_fft_inverse(h)
-        } else {
-            planner.plan_fft_forward(h)
-        };
-
-    let f_row =
-        if inverse {
-            planner.plan_fft_inverse(w)
-        } else {
-            planner.plan_fft_forward(w)
-        };
+    let f_row = if inverse { &plans.row_inv } else { &plans.row_fwd };
+    let f_col = if inverse { &plans.col_inv } else { &plans.col_fwd };
 
     let mut data = data.clone();
 
