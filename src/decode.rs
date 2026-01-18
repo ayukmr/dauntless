@@ -1,9 +1,12 @@
 use crate::types::{Lightness, Corners, FCorners};
 
+use std::cmp::Ordering;
+
 use ndarray::{s, Array2};
 
 const BIT_THRESH: f32 = 0.5;
 const ERR_THRESH: u32 = 1;
+const N_MEANS: usize = 5;
 
 const CODES: [u64; 11] = [
     57401312644,
@@ -22,8 +25,11 @@ const CODES: [u64; 11] = [
 pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
     let tag = sample(img, corners)?;
 
-    let min = tag.fold(f32::INFINITY, |a, &b| a.min(b));
-    let max = tag.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+    let mut vals = tag.clone().flatten().to_vec();
+    vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+
+    let min = vals[..N_MEANS].iter().sum::<f32>() / N_MEANS as f32;
+    let max = vals[vals.len() - N_MEANS..].iter().sum::<f32>() / N_MEANS as f32;
 
     let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > BIT_THRESH);
 
@@ -77,8 +83,8 @@ fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
             let px = ix.floor() as isize;
             let py = iy.floor() as isize;
 
-            let val = img.get((py as usize, px as usize))?;
-            out[x + y * 6] = *val;
+            let val = img.slice(s![py - 1..py + 1, px - 1..px + 1]);
+            out[x + y * 6] = val.sum() / val.len() as f32;
         }
     }
 

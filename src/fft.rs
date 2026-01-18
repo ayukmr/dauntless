@@ -52,22 +52,22 @@ fn fft2(data: &Frequency, inverse: bool) -> Frequency {
 
     let mut data = data.clone();
 
-    data.axis_iter_mut(Axis(1))
+    data
+        .as_slice_mut()
+        .unwrap()
+        .par_chunks_mut(w)
+        .for_each(|row| {
+            f_row.process(row);
+        });
+
+    data
+        .axis_iter_mut(Axis(1))
         .into_par_iter()
         .for_each(|mut col| {
             let mut v = col.to_vec();
             f_col.process(&mut v);
 
             col.assign(&Array1::from(v));
-        });
-
-    data.axis_iter_mut(Axis(0))
-        .into_par_iter()
-        .for_each(|mut row| {
-            let mut v = row.to_vec();
-            f_row.process(&mut v);
-
-            row.assign(&Array1::from(v));
         });
 
     if inverse {
