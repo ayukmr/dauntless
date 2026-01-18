@@ -3,6 +3,7 @@ use crate::types::{Lightness, Corners, FCorners};
 use ndarray::{s, Array2};
 
 const BIT_THRESH: f32 = 0.5;
+const ERR_THRESH: u32 = 1;
 
 const CODES: [u64; 11] = [
     57401312644,
@@ -26,22 +27,30 @@ pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
 
     let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > BIT_THRESH);
 
+    let mut best: Option<(usize, u32)> = None;
+
     for _ in 0..4 {
-        let bin =
+        let bin: u64 =
             bits
                 .iter()
                 .fold(0, |n, &t| (n << 1) | if t { 1 } else { 0 });
 
-        let id = CODES.iter().position(|&i| i == bin);
+        for (i, code) in CODES.iter().enumerate() {
+            let dist = (&bin ^ code).count_ones();
 
-        if let Some(id) = id {
-            return Some(id as u32);
+            if dist == 0 {
+                return Some(i as u32);
+            }
+
+            if dist <= ERR_THRESH && best.map_or(true, |(_, best_dist)| dist < best_dist) {
+                best = Some((i, dist));
+            }
         }
 
         bits = rot90(bits);
     }
 
-    None
+    best.map(|(i, _)| i as u32)
 }
 
 fn rot90<T: Clone>(a: Array2<T>) -> Array2<T> {
