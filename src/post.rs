@@ -1,7 +1,9 @@
 use crate::types::{Lightness, Mask};
 use crate::config::cfg;
 
-use ndarray::{s, Array2, Zip};
+use std::collections::VecDeque;
+
+use ndarray::{Array2, Zip};
 
 pub fn nms(mag: &Lightness, orient: &Array2<(i32, i32)>) -> Lightness {
     let (h, w) = mag.dim();
@@ -41,15 +43,29 @@ pub fn hysteresis(edges: &Lightness) -> Mask {
     let strong = edges.mapv(|v| v > high);
     let weak = edges.mapv(|v| v > low && v <= high);
 
-    Array2::from_shape_fn(edges.dim(), |(y, x)| {
-        let str = strong[[y, x]];
-        let wk = weak[[y, x]];
+    let mut res = strong.clone();
+    let mut dq = VecDeque::new();
 
-        if str || !wk {
-            return str;
+    let (h, w) = edges.dim();
+
+    for y in 0..h {
+        for x in 0..w {
+            if strong[[y, x]] {
+                dq.push_back((y, x));
+            }
         }
+    }
 
-        let patch = strong.slice(s![y - 1..=y + 1, x - 1..=x + 1]);
-        patch.iter().any(|&e| e)
-    })
+    while let Some((y, x)) = dq.pop_front() {
+        for ny in y.saturating_sub(1)..=(y + 1).min(h - 1) {
+            for nx in x.saturating_sub(1)..=(x + 1).min(w - 1) {
+                if weak[[ny, nx]] && !res[[ny, nx]] {
+                    res[[ny, nx]] = true;
+                    dq.push_back((ny, nx));
+                }
+            }
+        }
+    }
+
+    res
 }

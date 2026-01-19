@@ -4,25 +4,33 @@ use crate::config::cfg;
 
 use rayon::prelude::*;
 
+const TAG_R: f32 = 0.2;
+
 pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
     let freq = fft::to_freq(data);
 
-    let edges = mask::canny(&freq);
-    let corners = mask::harris(&freq);
+    let (edges, corners) = rayon::join(
+        || mask::canny(&freq),
+        || mask::harris(&freq),
+    );
 
     let shapes = tags::tags(&edges, &corners);
 
     let (img_h, img_w) = data.dim();
-    let half_fov_tan = cfg().half_fov.tan();
+    let half_fov_tan = (cfg().fov_rad / 2.0).tan();
 
-    let tags = shapes.into_par_iter().map(|corners| {
-        let id = decode::decode(data, corners);
+    let tags =
+        shapes
+            .into_par_iter()
+            .map(|corners| {
+                let id = decode::decode(data, corners);
 
-        let rot = rotation(corners);
-        let pos = pos(corners, img_w as f32, img_h as f32, half_fov_tan);
+                let rot = rotation(corners);
+                let pos = pos(corners, img_w as f32, img_h as f32, half_fov_tan);
 
-        Tag { id, rot, pos, corners }
-    }).collect();
+                Tag { id, rot, pos, corners }
+            })
+            .collect();
 
     (edges, tags)
 }
@@ -70,7 +78,7 @@ fn pos(corners: Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
 }
 
 fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
-    let scale = img_h / (2.0 * vis) * 0.2;
+    let scale = img_h / (2.0 * vis) * TAG_R;
     let aspect = img_w / img_h;
 
     let x = point.0 / img_w * 2.0 - 1.0;

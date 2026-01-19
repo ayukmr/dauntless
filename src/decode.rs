@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use ndarray::{s, Array2};
 
 const BIT_THRESH: f32 = 0.5;
-const ERR_THRESH: u32 = 1;
+const ERR_THRESH: u32 = 2;
 const N_MEANS: usize = 5;
 
 const CODES: [u64; 11] = [
@@ -42,13 +42,13 @@ pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
                 .fold(0, |n, &t| (n << 1) | if t { 1 } else { 0 });
 
         for (i, code) in CODES.iter().enumerate() {
-            let dist = (&bin ^ code).count_ones();
+            let dist = (bin ^ code).count_ones();
 
             if dist == 0 {
                 return Some(i as u32);
             }
 
-            if dist <= ERR_THRESH && best.map_or(true, |(_, best_dist)| dist < best_dist) {
+            if dist <= ERR_THRESH && best.is_none_or(|(_, best_dist)| dist < best_dist) {
                 best = Some((i, dist));
             }
         }

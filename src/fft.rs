@@ -4,7 +4,7 @@ use rayon::prelude::*;
 
 use std::sync::Arc;
 
-use ndarray::{Array1, Array2, Axis};
+use ndarray::{Array2, Axis};
 use once_cell::sync::OnceCell;
 
 use num_complex::Complex;
@@ -21,17 +21,17 @@ static PLANS: OnceCell<Arc<Plans>> = OnceCell::new();
 
 pub fn to_freq(data: &Lightness) -> Frequency {
     let complex = data.mapv(Complex::from);
-    let freq = fft2(&complex, false);
+    let freq = fft2(complex, false);
     shift(&freq, false)
 }
 
 pub fn from_freq(freq: &Frequency) -> Lightness {
     let shifted = shift(freq, true);
-    let data = fft2(&shifted, true);
+    let data = fft2(shifted, true);
     data.mapv(|n| n.re)
 }
 
-fn fft2(data: &Frequency, inverse: bool) -> Frequency {
+fn fft2(mut data: Frequency, inverse: bool) -> Frequency {
     let (h, w) = data.dim();
 
     let plans =
@@ -50,32 +50,42 @@ fn fft2(data: &Frequency, inverse: bool) -> Frequency {
     let f_row = if inverse { &plans.row_inv } else { &plans.row_fwd };
     let f_col = if inverse { &plans.col_inv } else { &plans.col_fwd };
 
-    let mut data = data.clone();
-
+    let rs_len = f_row.get_inplace_scratch_len();
     data
         .as_slice_mut()
         .unwrap()
         .par_chunks_mut(w)
-        .for_each(|row| {
-            f_row.process(row);
-        });
+        .for_each_init(
+            || vec![Complex::<f32>::default(); rs_len],
+            |scratch, row| f_row.process_with_scratch(row, scratch),
+        );
 
+    let cs_len = f_col.get_inplace_scratch_len();
     data
         .axis_iter_mut(Axis(1))
         .into_par_iter()
-        .for_each(|mut col| {
-            let mut v = col.to_vec();
-            f_col.process(&mut v);
-
-            col.assign(&Array1::from(v));
-        });
+        .for_each_init(
+            || (
+                vec![Complex::<f32>::default(); h],
+                vec![Complex::<f32>::default(); cs_len],
+            ),
+            |(buf, scratch), mut col| {
+                for (i, v) in col.iter().enumerate() {
+                    buf[i] = *v;
+                }
+                f_col.process_with_scratch(buf, scratch);
+                for (i, v) in col.iter_mut().enumerate() {
+                    *v = buf[i];
+                }
+            },
+        );
 
     if inverse {
         let scale = (h * w) as f32;
-        data.mapv(|l| l / scale)
-    } else {
-        data
+        data.mapv_inplace(|l| l / scale);
     }
+
+    data
 }
 
 fn shift<T: Copy>(data: &Array2<T>, inverse: bool) -> Array2<T> {

@@ -1,11 +1,12 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
+use arc_swap::ArcSwap;
 use once_cell::sync::OnceCell;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Config {
-    pub half_fov: f32,
+    pub fov_rad: f32,
 
     pub harris_k: f32,
     pub harris_thresh: f32,
@@ -20,7 +21,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            half_fov: 75.0_f32.to_radians() / 2.0,
+            fov_rad: 75.0_f32.to_radians(),
 
             harris_k: 0.01,
             harris_thresh: 0.05,
@@ -34,16 +35,14 @@ impl Default for Config {
     }
 }
 
-static CONFIG: OnceCell<Arc<RwLock<Config>>> = OnceCell::new();
+static CONFIG: OnceCell<ArcSwap<Config>> = OnceCell::new();
 
 pub fn set(config: Config) {
-    if let Some(c) = CONFIG.get() {
-        *c.write().unwrap() = config;
-    } else {
-        CONFIG.set(Arc::new(RwLock::new(config))).ok();
-    }
+    CONFIG
+        .get_or_init(|| ArcSwap::from_pointee(Config::default()))
+        .store(Arc::new(config));
 }
 
 pub fn cfg() -> Config {
-    *CONFIG.get().unwrap().read().unwrap()
+    **CONFIG.get().unwrap().load()
 }
