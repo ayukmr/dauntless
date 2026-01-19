@@ -6,7 +6,7 @@ use ndarray::Array2;
 pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
     let mut corners = corners.clone();
 
-    let mut labels = Array2::from_elem(edges.dim(), None);
+    let mut labels = Array2::from_elem(edges.dim(), 0);
     let mut label_pts = vec![Vec::new()];
 
     let mut next_label = 0;
@@ -27,12 +27,14 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                 for xx in (x - 2)..=(x + 2) {
                     let nid = labels[[yy, xx]];
 
-                    if let Some(nid) = nid {
-                        if let Some(id) = id {
-                            uf.unite(id, nid);
-                        } else {
-                            id = Some(nid);
-                        }
+                    if nid == 0 {
+                        continue;
+                    }
+
+                    if let Some(id) = id {
+                        uf.unite(id, nid);
+                    } else {
+                        id = Some(nid);
                     }
                 }
             }
@@ -46,7 +48,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                     next_label
                 }
             };
-            labels[[y, x]] = Some(id);
+            labels[[y, x]] = id;
 
             let mut corner = None;
 
