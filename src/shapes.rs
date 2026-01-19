@@ -1,8 +1,6 @@
 use crate::uf::UnionFind;
 use crate::types::{Mask, Quads, Shapes};
 
-use rayon::prelude::*;
-
 use ndarray::Array2;
 
 pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
@@ -87,7 +85,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
 
 pub fn filter_quads(shapes: Shapes) -> Quads {
     shapes
-        .into_par_iter()
+        .into_iter()
         .filter_map(|pts| {
             if pts.len() < 4 {
                 return None;

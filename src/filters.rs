@@ -1,12 +1,10 @@
 use crate::types::{Corners, Point, Quads};
 
-use rayon::prelude::*;
-
 const PARA_THRESH: f32 = 0.75;
 
 pub fn filter_paras(quads: Quads) -> Quads {
     quads
-        .into_par_iter()
+        .into_iter()
         .filter_map(|corners| {
             let (tl, tr, bl, br) = corners;
             let t = dist(&tl, &tr);
@@ -41,7 +39,7 @@ pub fn filter_enclosed(quads: Quads) -> Quads {
     let bds: Vec<Bounds> = quads.iter().map(bounds).collect();
 
     quads
-        .into_par_iter()
+        .into_iter()
         .enumerate()
         .filter(|(idx, _)| {
             let bd = &bds[*idx];

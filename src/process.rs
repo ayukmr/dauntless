@@ -2,8 +2,6 @@ use crate::{decode, mask, tags};
 use crate::types::{Corners, Lightness, Mask, Point2D, Point3D, Tag};
 use crate::config::cfg;
 
-use rayon::prelude::*;
-
 const TAG_R: f32 = 0.2;
 
 pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
@@ -12,14 +10,14 @@ pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
         || mask::harris(data),
     );
 
-    let shapes = tags::tags(&edges, &corners);
+    let quads = tags::tags(&edges, &corners);
 
     let (img_h, img_w) = data.dim();
     let half_fov_tan = (cfg().fov_rad / 2.0).tan();
 
     let tags =
-        shapes
-            .into_par_iter()
+        quads
+            .into_iter()
             .map(|corners| {
                 let id = decode::decode(data, corners);
 
