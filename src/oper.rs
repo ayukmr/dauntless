@@ -1,73 +1,89 @@
-use crate::types::Frequency;
-use crate::fft;
+use crate::types::Lightness;
 
-use std::cmp;
+use ndarray::{s, Array2, Zip};
 
-use ndarray::{s, Array1, Array2, Axis};
-use once_cell::sync::OnceCell;
+const GAUSS: [f32; 5] = [
+    1.0 / 16.0,
+    4.0 / 16.0,
+    6.0 / 16.0,
+    4.0 / 16.0,
+    1.0 / 16.0,
+];
 
-const BLUR_R: f32 = 0.15;
+const SOBEL_X: [[f32; 3]; 3] = [
+    [-1.0, 0.0, 1.0],
+    [-2.0, 0.0, 2.0],
+    [-1.0, 0.0, 1.0],
+];
 
-static BLUR_MASK: OnceCell<Array2<f32>> = OnceCell::new();
+const SOBEL_Y: [[f32; 3]; 3] = [
+    [-1.0, -2.0, -1.0],
+    [ 0.0,  0.0,  0.0],
+    [ 1.0,  2.0,  1.0],
+];
 
-static SOBEL_X: OnceCell<Frequency> = OnceCell::new();
-static SOBEL_Y: OnceCell<Frequency> = OnceCell::new();
+fn pad(img: &Lightness, r: usize) -> Lightness {
+    let (h, w) = img.dim();
 
-pub fn blur(freq: &Frequency) -> Frequency {
-    let mask = BLUR_MASK.get_or_init(|| {
-        let (h, w) = freq.dim();
-
-        let mw = w as f32 / 2.0;
-        let mh = h as f32 / 2.0;
-
-        let xs = Array1::from_iter((0..w).map(|x| (x as f32 - mw).powi(2)));
-        let ys = Array1::from_iter((0..h).map(|y| (y as f32 - mh).powi(2)));
-
-        let sigma = BLUR_R * cmp::min(h, w) as f32;
-
-        let dist = &ys.insert_axis(Axis(1)) + &xs.insert_axis(Axis(0));
-        (-dist / (2.0 * sigma.powi(2))).exp()
-    });
-
-    freq * mask
+    Array2::from_shape_fn(
+        (h + 2 * r, w + 2 * r),
+        |(y, x)| {
+            let yy = (y - r).clamp(0, h - 1);
+            let xx = (x - r).clamp(0, w - 1);
+            img[(yy, xx)]
+        }
+    )
 }
 
-pub fn sobel(freq: &Frequency) -> (Frequency, Frequency) {
-    let sobel_x = SOBEL_X.get_or_init(|| {
-        create_kernel(
-            vec![
-                -1., 0., 1.,
-                -2., 0., 2.,
-                -1., 0., 1.,
-            ],
-            freq.dim()
-        )
-    });
+pub fn blur(img: &Lightness) -> Lightness {
+    let (h, w) = img.dim();
+    let pad = pad(img, 2);
 
-    let sobel_y = SOBEL_Y.get_or_init(|| {
-        create_kernel(
-            vec![
-                -1., -2., -1.,
-                 0.,  0.,  0.,
-                 1.,  2.,  1.,
-            ],
-            freq.dim()
-        )
-    });
+    let mut bh: Array2<f32> = Array2::zeros((h + 4, w));
+    for (i, &k) in GAUSS.iter().enumerate() {
+        let v = pad.slice(s![.., i..i + w]);
+        Zip::from(&mut bh)
+            .and(&v)
+            .for_each(|t, &x| *t += k * x);
+    }
 
-    let x = freq * sobel_x;
-    let y = freq * sobel_y;
+    let mut bv: Array2<f32> = Array2::zeros((h, w));
+    for (i, &k) in GAUSS.iter().enumerate() {
+        let v = bh.slice(s![i..i + h, ..]);
+        Zip::from(&mut bv)
+            .and(&v)
+            .for_each(|o, &x| *o += k * x);
+    }
 
-    (x, y)
+    bv
 }
 
-fn create_kernel(data: Vec<f32>, dim: (usize, usize)) -> Frequency {
-    let kernel = Array2::from_shape_vec((3, 3), data).unwrap();
+pub fn sobel(img: &Lightness) -> (Lightness, Lightness) {
+    let (h, w) = img.dim();
+    let pad = pad(img, 1);
 
-    let mut padded = Array2::zeros(dim);
+    let mut gx = Array2::zeros((h, w));
+    let mut gy = Array2::zeros((h, w));
 
-    let (kh, kw) = kernel.dim();
-    padded.slice_mut(s![..kh, ..kw]).assign(&kernel);
+    for dy in 0..3 {
+        for dx in 0..3 {
+            let vx = pad.slice(s![dy..dy + h, dx..dx + w]);
+            let cx = SOBEL_X[dy][dx];
+            if cx != 0.0 {
+                Zip::from(&mut gx)
+                    .and(&vx)
+                    .for_each(|o, &v| *o += cx * v);
+            }
 
-    fft::to_freq(&padded)
+            let vy = pad.slice(s![dy..dy + h, dx..dx + w]);
+            let cy = SOBEL_Y[dy][dx];
+            if cy != 0.0 {
+                Zip::from(&mut gy)
+                    .and(&vy)
+                    .for_each(|o, &v| *o += cy * v);
+            }
+        }
+    }
+
+    (gx, gy)
 }

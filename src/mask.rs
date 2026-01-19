@@ -1,17 +1,14 @@
-use crate::{fft, oper, post};
-use crate::types::{Frequency, Mask};
+use crate::{oper, post};
+use crate::types::{Lightness, Mask};
 use crate::config::cfg;
 
 use ndarray::{s, Array2, Zip};
 
 const HARRIS_NEARBY: usize = 3;
 
-pub fn canny(freq: &Frequency) -> Mask {
-    let blur = oper::blur(freq);
-    let (fx, fy) = oper::sobel(&blur);
-
-    let x = fft::from_freq(&fx);
-    let y = fft::from_freq(&fy);
+pub fn canny(img: &Lightness) -> Mask {
+    let blur = oper::blur(img);
+    let (x, y) = oper::sobel(&blur);
 
     let mag =
         Zip::from(&x)
@@ -40,19 +37,16 @@ pub fn canny(freq: &Frequency) -> Mask {
     post::hysteresis(&supp)
 }
 
-pub fn harris(freq: &Frequency) -> Mask {
-    let (fx, fy) = oper::sobel(freq);
-
-    let x = fft::from_freq(&fx);
-    let y = fft::from_freq(&fy);
+pub fn harris(img: &Lightness) -> Mask {
+    let (x, y) = oper::sobel(img);
 
     let xx = x.powi(2);
     let yy = y.powi(2);
     let xy = x * y;
 
-    let sxx = fft::from_freq(&oper::blur(&fft::to_freq(&xx)));
-    let syy = fft::from_freq(&oper::blur(&fft::to_freq(&yy)));
-    let sxy = fft::from_freq(&oper::blur(&fft::to_freq(&xy)));
+    let sxx = oper::blur(&xx);
+    let syy = oper::blur(&yy);
+    let sxy = oper::blur(&xy);
 
     let cfg = cfg();
 

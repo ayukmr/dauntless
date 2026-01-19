@@ -1,5 +1,4 @@
 use ndarray::Array2;
-use num_complex::Complex;
 
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -11,7 +10,6 @@ pub struct Tag {
 }
 
 pub type Lightness = Array2<f32>;
-pub type Frequency = Array2<Complex<f32>>;
 pub type Mask = Array2<bool>;
 
 pub type Point = (u32, u32);

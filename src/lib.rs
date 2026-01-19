@@ -1,6 +1,5 @@
 mod types;
 mod config;
-mod fft;
 mod oper;
 mod post;
 mod mask;

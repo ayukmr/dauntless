@@ -1,4 +1,4 @@
-use crate::{decode, fft, mask, tags};
+use crate::{decode, mask, tags};
 use crate::types::{Corners, Lightness, Mask, Point2D, Point3D, Tag};
 use crate::config::cfg;
 
@@ -7,11 +7,9 @@ use rayon::prelude::*;
 const TAG_R: f32 = 0.2;
 
 pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
-    let freq = fft::to_freq(data);
-
     let (edges, corners) = rayon::join(
-        || mask::canny(&freq),
-        || mask::harris(&freq),
+        || mask::canny(data),
+        || mask::harris(data),
     );
 
     let shapes = tags::tags(&edges, &corners);
