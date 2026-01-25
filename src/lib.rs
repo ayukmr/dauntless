@@ -1,14 +1,14 @@
-mod types;
 mod config;
+mod decode;
+mod filters;
+mod mask;
 mod oper;
 mod post;
-mod mask;
-mod uf;
-mod shapes;
-mod filters;
-mod tags;
-mod decode;
 mod process;
+mod shapes;
+mod tags;
+mod types;
+mod uf;
 
 pub use types::Tag;
 pub use config::Config;
