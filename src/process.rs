@@ -1,4 +1,4 @@
-use crate::{decode, mask, tags};
+use crate::{candidates, decode, mask};
 use crate::types::{Corners, Lightness, Mask, Point2D, Point3D, Tag};
 use crate::config::cfg;
 
@@ -10,13 +10,13 @@ pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
         || mask::harris(data),
     );
 
-    let quads = tags::tags(&edges, &corners);
+    let candidates = candidates::candidates(&edges, &corners);
 
     let (img_h, img_w) = data.dim();
     let half_fov_tan = (cfg().fov_rad / 2.0).tan();
 
     let tags =
-        quads
+        candidates
             .into_iter()
             .map(|corners| {
                 let id = decode::decode(data, corners);
@@ -31,9 +31,7 @@ pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
     (edges, tags)
 }
 
-fn rotation(corners: Corners) -> f32 {
-    let (tl, tr, bl, br) = corners;
-
+fn rotation((tl, tr, bl, br): Corners) -> f32 {
     let x0 = (tr.0 - tl.0) as f32;
     let x1 = (br.0 - bl.0) as f32;
 
@@ -53,9 +51,7 @@ fn rotation(corners: Corners) -> f32 {
     }
 }
 
-fn pos(corners: Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
-    let (tl, tr, bl, br) = corners;
-
+fn pos((tl, tr, bl, br): Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
     let y0 = (bl.1 - tl.1) as f32;
     let y1 = (br.1 - tr.1) as f32;
 

@@ -1,29 +1,26 @@
+use std::f32;
+
 use crate::types::{Corners, Point, Quads};
 
-const PARA_THRESH: f32 = 0.75;
+const MAX_RATIO: f32 = 1.3;
+const VH_MAX_RATIO: f32 = 1.5;
 
-pub fn filter_paras(quads: Quads) -> Quads {
+pub fn filter_ratios(quads: Quads) -> Quads {
     quads
         .into_iter()
-        .filter_map(|corners| {
-            let (tl, tr, bl, br) = corners;
-            let t = dist(&tl, &tr);
-            let b = dist(&bl, &br);
-            let l = dist(&tl, &bl);
-            let r = dist(&tr, &br);
+        .filter(|(tl, tr, bl, br)| {
+            let t = dist(tl, tr);
+            let b = dist(bl, br);
+            let l = dist(tl, bl);
+            let r = dist(tr, br);
 
             if t == 0.0 || b == 0.0 || l == 0.0 || r == 0.0 {
-                return None;
+                return false;
             }
 
-            let hd = (t / b).abs();
-            let vd = (l / r).abs();
-
-            if (hd - 1.0).abs() + (vd - 1.0).abs() < PARA_THRESH {
-                Some(corners)
-            } else {
-                None
-            }
+            ratio(t, b) <= MAX_RATIO
+                && ratio(l, r) <= MAX_RATIO
+                && ratio((t + b) / 2.0, (l + r) / 2.0) <= VH_MAX_RATIO
         })
         .collect()
 }
@@ -33,6 +30,39 @@ fn dist(a: &Point, b: &Point) -> f32 {
     let dy = a.1 as f32 - b.1 as f32;
 
     (dx * dx + dy * dy).sqrt()
+}
+
+fn ratio(a: f32, b: f32) -> f32 {
+    if a > b { a / b } else { b / a }
+}
+
+pub fn filter_angles(quads: Quads) -> Quads {
+    quads
+        .into_iter()
+        .filter(|(tl, tr, bl, br)| {
+            let corners = [tl, bl, br, tr];
+
+            for i in 0..4 {
+                let c0 = corners[(i + 3) % 4];
+                let c1 = corners[i];
+                let c2 = corners[(i + 1) % 4];
+
+                let a = ((c1.0 as f32 - c0.0 as f32).abs(), (c1.1 as f32 - c0.1 as f32).abs());
+                let b = ((c2.0 as f32 - c1.0 as f32).abs(), (c2.1 as f32 - c1.1 as f32).abs());
+
+                let a_mag = a.0.hypot(a.1);
+                let b_mag = b.0.hypot(b.1);
+
+                let rad = ((a.0 * b.0 + a.1 * b.1) / (a_mag * b_mag)).acos();
+
+                if (rad - f32::consts::FRAC_PI_2).abs() > f32::consts::FRAC_PI_6 {
+                    return false;
+                }
+            }
+
+            true
+        })
+        .collect()
 }
 
 pub fn filter_enclosed(quads: Quads) -> Quads {
@@ -65,9 +95,7 @@ struct Bounds {
     b: u32,
 }
 
-fn bounds(corners: &Corners) -> Bounds {
-    let (tl, tr, bl, br) = corners;
-
+fn bounds((tl, tr, bl, br): &Corners) -> Bounds {
     let l = u32::min(tl.0, bl.0);
     let r = u32::max(tr.0, br.0);
     let t = u32::min(tl.1, tr.1);

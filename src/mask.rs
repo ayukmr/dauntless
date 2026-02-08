@@ -60,10 +60,13 @@ pub fn harris(img: &Lightness) -> Mask {
                 det - cfg.harris_k * trace * trace
             });
 
+    let rmax = resp.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+    let thresh = cfg.harris_thresh * rmax;
+
     let points =
         resp
             .indexed_iter()
-            .filter_map(|(i, &v)| (v > cfg.harris_thresh).then_some(i));
+            .filter_map(|(i, &v)| (v > thresh).then_some(i));
 
     let mut mask = Array2::from_elem(resp.dim(), false);
     let (h, w) = resp.dim();

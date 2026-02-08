@@ -14,7 +14,8 @@ pub struct Config {
     pub hyst_low: f32,
     pub hyst_high: f32,
 
-    pub filter_paras: bool,
+    pub filter_ratios: bool,
+    pub filter_angles: bool,
     pub filter_enclosed: bool,
 }
 
@@ -29,8 +30,9 @@ impl Default for Config {
             hyst_low: 0.0125,
             hyst_high: 0.05,
 
-            filter_paras: true,
-            filter_enclosed: true,
+            filter_ratios: true,
+            filter_angles: true,
+            filter_enclosed: false,
         }
     }
 }

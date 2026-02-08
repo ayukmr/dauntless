@@ -1,3 +1,4 @@
+mod candidates;
 mod config;
 mod decode;
 mod filters;
@@ -6,7 +7,6 @@ mod oper;
 mod post;
 mod process;
 mod shapes;
-mod tags;
 mod types;
 mod uf;
 

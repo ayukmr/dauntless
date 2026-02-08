@@ -83,7 +83,7 @@ fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
             let px = ix.floor() as isize;
             let py = iy.floor() as isize;
 
-            let val = img.slice(s![py - 1..py + 1, px - 1..px + 1]);
+            let val = img.slice(s![py - 1..=py + 1, px - 1..=px + 1]);
             out[x + y * 6] = val.sum() / val.len() as f32;
         }
     }
@@ -96,9 +96,9 @@ struct Homography {
 }
 
 impl Homography {
-    fn from_corners(corners: FCorners) -> Homography {
-        let ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = corners;
-
+    fn from_corners(
+        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)): FCorners,
+    ) -> Homography {
         let dx1 = x1 - x3;
         let dx2 = x2 - x3;
         let dx3 = x0 - x1 + x3 - x2;
