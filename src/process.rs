@@ -2,7 +2,7 @@ use crate::{candidates, decode, mask};
 use crate::types::{Corners, Lightness, Mask, Point2D, Point3D, Tag};
 use crate::config::cfg;
 
-const TAG_R: f32 = 0.2;
+const TAG_M: f32 = 0.2;
 
 pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
     let (edges, corners) = rayon::join(
@@ -22,7 +22,7 @@ pub fn process(data: &Lightness) -> (Mask, Vec<Tag>) {
                 let id = decode::decode(data, corners);
 
                 let rot = rotation(corners);
-                let pos = pos(corners, img_w as f32, img_h as f32, half_fov_tan);
+                let pos = position(corners, img_w as f32, img_h as f32, half_fov_tan);
 
                 Tag { id, rot, pos, corners }
             })
@@ -51,7 +51,7 @@ fn rotation((tl, tr, bl, br): Corners) -> f32 {
     }
 }
 
-fn pos((tl, tr, bl, br): Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
+fn position((tl, tr, bl, br): Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
     let y0 = (bl.1 - tl.1) as f32;
     let y1 = (br.1 - tr.1) as f32;
 
@@ -70,7 +70,7 @@ fn pos((tl, tr, bl, br): Corners, img_w: f32, img_h: f32, half_fov_tan: f32) -> 
 }
 
 fn to_3d(point: Point2D, vis: f32, img_w: f32, img_h: f32, half_fov_tan: f32) -> Point3D {
-    let scale = img_h / (2.0 * vis) * TAG_R;
+    let scale = img_h / (2.0 * vis) * TAG_M;
     let aspect = img_w / img_h;
 
     let x = point.0 / img_w * 2.0 - 1.0;

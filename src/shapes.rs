@@ -15,18 +15,30 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
 
     let mut uf = UnionFind::new();
 
+    let es = edges.as_slice_memory_order().unwrap();
+    let cs = corners.as_slice_memory_order_mut().unwrap();
+    let ls = labels.as_slice_memory_order_mut().unwrap();
+
     for y in 2..h - 2 {
+        let r = y * w;
+
         for x in 2..w - 2 {
-            if !edges[[y, x]] {
+            let i = x + r;
+
+            if !es[i] {
                 continue;
             }
 
             let mut id = None;
 
-            for yy in (y - 2)..=(y + 2) {
-                for xx in (x - 2)..=(x + 2) {
-                    let nid = labels[[yy, xx]];
+            for yy in (y - 2)..=y {
+                let rr = yy * w;
+                let xx_end = if yy == y { x } else { x + 2 };
 
+                for xx in (x - 2)..=xx_end {
+                    let ii = xx + rr;
+
+                    let nid = ls[ii];
                     if nid == 0 {
                         continue;
                     }
@@ -48,17 +60,22 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                     next_label
                 }
             };
-            labels[[y, x]] = id;
+            ls[i] = id;
 
             let mut corner = None;
 
             for yy in (y - 1)..=(y + 1) {
+                let rr = yy * w;
+
                 for xx in (x - 1)..=(x + 1) {
-                    if corners[[yy, xx]] {
+                    let ii = xx + rr;
+
+                    if cs[ii] {
                         corner = Some((yy, xx));
                         break;
                     }
                 }
+
                 if corner.is_some() {
                     break;
                 }
@@ -66,7 +83,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
 
             if let Some((cy, cx)) = corner {
                 label_pts[id as usize].push((cx as u32, cy as u32));
-                corners[[cy, cx]] = false;
+                cs[cx + cy * w] = false;
             }
         }
     }

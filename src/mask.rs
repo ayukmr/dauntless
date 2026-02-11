@@ -2,7 +2,7 @@ use crate::{oper, post};
 use crate::types::{Lightness, Mask};
 use crate::config::cfg;
 
-use ndarray::{s, Array2, Zip};
+use ndarray::{Array2, Zip};
 
 const HARRIS_NEARBY: usize = 3;
 
@@ -63,26 +63,32 @@ pub fn harris(img: &Lightness) -> Mask {
     let rmax = resp.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
     let thresh = cfg.harris_thresh * rmax;
 
-    let points =
-        resp
-            .indexed_iter()
-            .filter_map(|(i, &v)| (v > thresh).then_some(i));
-
     let mut mask = Array2::from_elem(resp.dim(), false);
     let (h, w) = resp.dim();
 
-    for (y, x) in points {
-        let x0 = x.saturating_sub(HARRIS_NEARBY);
-        let x1 = usize::min(x + HARRIS_NEARBY, w - 1);
+    let ms = mask.as_slice_memory_order_mut().unwrap();
+    let rs = resp.as_slice_memory_order().unwrap();
 
-        let y0 = y.saturating_sub(HARRIS_NEARBY);
-        let y1 = usize::min(y + HARRIS_NEARBY, h - 1);
+    for y in HARRIS_NEARBY..h - HARRIS_NEARBY {
+        let r = y * w;
 
-        let patch = resp.slice(s![y0..=y1, x0..=x1]);
-        let max = patch.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        for x in HARRIS_NEARBY..w - HARRIS_NEARBY {
+            let i = x + r;
 
-        if resp[[y, x]] == max {
-            mask[[y, x]] = true;
+            let v = rs[i];
+            if v <= thresh {
+                continue;
+            }
+
+            let is_max =
+                !(y - HARRIS_NEARBY..=y + HARRIS_NEARBY).any(|yy| {
+                    let rr = yy * w;
+                    (x - HARRIS_NEARBY..=x + HARRIS_NEARBY).any(|xx| rs[xx + rr] > v)
+                });
+
+            if is_max {
+                ms[i] = true;
+            }
         }
     }
 
