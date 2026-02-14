@@ -10,6 +10,7 @@ mod process;
 mod shapes;
 mod types;
 mod uf;
+mod ws;
 
 pub use config::Config;
 pub use detector::Detector;

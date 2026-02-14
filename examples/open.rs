@@ -1,4 +1,3 @@
-use dauntless::Config;
 use ndarray::Array2;
 use image::imageops::{self, FilterType};
 
@@ -25,7 +24,7 @@ fn main() {
         resized.into_vec(),
     ).unwrap().mapv(|l| l as f32) / 255.0;
 
-    let detector = dauntless::Detector::new(Config::default());
+    let mut detector = dauntless::Detector::default();
 
     let tags = detector.tags(&data);
     println!("{:?}", tags);

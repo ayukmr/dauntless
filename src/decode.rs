@@ -1,5 +1,3 @@
-use crate::detector::Detector;
-
 use crate::types::{Lightness, Corners, FCorners};
 
 use std::cmp::Ordering;
@@ -24,75 +22,73 @@ const CODES: [u64; 11] = [
     14225578886,
 ];
 
-impl Detector {
-    pub fn decode(&self, img: &Lightness, corners: Corners) -> Option<u32> {
-        let tag = self.sample(img, corners)?;
+pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
+    let tag = sample(img, corners)?;
 
-        let mut vals = tag.clone().flatten().to_vec();
-        vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+    let mut vals = tag.clone().flatten().to_vec();
+    vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
 
-        let min = vals[..N_MEANS].iter().sum::<f32>() / N_MEANS as f32;
-        let max = vals[vals.len() - N_MEANS..].iter().sum::<f32>() / N_MEANS as f32;
+    let min = vals[..N_MEANS].iter().sum::<f32>() / N_MEANS as f32;
+    let max = vals[vals.len() - N_MEANS..].iter().sum::<f32>() / N_MEANS as f32;
 
-        let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > BIT_THRESH);
+    let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > BIT_THRESH);
 
-        let mut best: Option<(usize, u32)> = None;
+    let mut best: Option<(usize, u32)> = None;
 
-        for _ in 0..4 {
-            let bin: u64 =
-                bits
-                    .iter()
-                    .fold(0, |n, &t| (n << 1) | if t { 1 } else { 0 });
+    for _ in 0..4 {
+        let bin: u64 =
+            bits
+                .iter()
+                .fold(0, |n, &t| (n << 1) | if t { 1 } else { 0 });
 
-            for (i, code) in CODES.iter().enumerate() {
-                let dist = (bin ^ code).count_ones();
+        for (i, code) in CODES.iter().enumerate() {
+            let dist = (bin ^ code).count_ones();
 
-                if dist == 0 {
-                    return Some(i as u32);
-                }
-
-                if dist <= ERR_THRESH && best.is_none_or(|(_, best_dist)| dist < best_dist) {
-                    best = Some((i, dist));
-                }
+            if dist == 0 {
+                return Some(i as u32);
             }
 
-            bits = self.rot90(bits);
-        }
-
-        best.map(|(i, _)| i as u32)
-    }
-
-    fn rot90<T: Clone>(&self, a: Array2<T>) -> Array2<T> {
-        a.slice(s![..;-1, ..]).reversed_axes().to_owned()
-    }
-
-    fn sample(&self, img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
-        let hm = Homography::from_corners((
-            (corners.0.0 as f32, corners.0.1 as f32),
-            (corners.1.0 as f32, corners.1.1 as f32),
-            (corners.2.0 as f32, corners.2.1 as f32),
-            (corners.3.0 as f32, corners.3.1 as f32),
-        ));
-
-        let mut out = vec![0.0; 36];
-
-        for y in 0..6 {
-            for x in 0..6 {
-                let u = (x as f32 + 1.5) / 8.0;
-                let v = (y as f32 + 1.5) / 8.0;
-
-                let (ix, iy) = hm.map(u, v);
-
-                let px = ix.floor() as isize;
-                let py = iy.floor() as isize;
-
-                let val = img.slice(s![py - 1..=py + 1, px - 1..=px + 1]);
-                out[x + y * 6] = val.sum() / val.len() as f32;
+            if dist <= ERR_THRESH && best.is_none_or(|(_, best_dist)| dist < best_dist) {
+                best = Some((i, dist));
             }
         }
 
-        Some(Array2::from_shape_vec((6, 6), out).unwrap())
+        bits = rot90(bits);
     }
+
+    best.map(|(i, _)| i as u32)
+}
+
+fn rot90<T: Clone>(a: Array2<T>) -> Array2<T> {
+    a.slice(s![..;-1, ..]).reversed_axes().to_owned()
+}
+
+fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
+    let hm = Homography::from_corners((
+        (corners.0.0 as f32, corners.0.1 as f32),
+        (corners.1.0 as f32, corners.1.1 as f32),
+        (corners.2.0 as f32, corners.2.1 as f32),
+        (corners.3.0 as f32, corners.3.1 as f32),
+    ));
+
+    let mut out = vec![0.0; 36];
+
+    for y in 0..6 {
+        for x in 0..6 {
+            let u = (x as f32 + 1.5) / 8.0;
+            let v = (y as f32 + 1.5) / 8.0;
+
+            let (ix, iy) = hm.map(u, v);
+
+            let px = ix.floor() as isize;
+            let py = iy.floor() as isize;
+
+            let val = img.slice(s![py - 1..=py + 1, px - 1..=px + 1]);
+            out[x + y * 6] = val.sum() / val.len() as f32;
+        }
+    }
+
+    Some(Array2::from_shape_vec((6, 6), out).unwrap())
 }
 
 struct Homography {
