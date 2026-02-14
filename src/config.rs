@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
-use arc_swap::ArcSwap;
-use once_cell::sync::OnceCell;
+use crate::detector::Detector;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -37,14 +34,12 @@ impl Default for Config {
     }
 }
 
-static CONFIG: OnceCell<ArcSwap<Config>> = OnceCell::new();
+impl Detector {
+    pub fn set_config(&mut self, config: Config) {
+        self.config = config;
+    }
 
-pub fn set(config: Config) {
-    CONFIG
-        .get_or_init(|| ArcSwap::from_pointee(Config::default()))
-        .store(Arc::new(config));
-}
-
-pub fn cfg() -> Config {
-    **CONFIG.get().unwrap().load()
+    pub fn get_config(&self) -> Config {
+        self.config
+    }
 }

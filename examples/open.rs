@@ -25,9 +25,8 @@ fn main() {
         resized.into_vec(),
     ).unwrap().mapv(|l| l as f32) / 255.0;
 
-    dauntless::set_config(Config::default());
+    let detector = dauntless::Detector::new(Config::default());
 
-    let tags = dauntless::tags(data);
-
+    let tags = detector.tags(&data);
     println!("{:?}", tags);
 }

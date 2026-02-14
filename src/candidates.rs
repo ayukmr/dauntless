@@ -1,22 +1,22 @@
-use crate::{shapes, filters};
+use crate::detector::Detector;
+
 use crate::types::{Mask, Quads};
-use crate::config::cfg;
 
-pub fn candidates(edges: &Mask, corners: &Mask) -> Quads {
-    let shapes = shapes::find_shapes(edges, corners);
-    let mut res = shapes::filter_quads(shapes);
+impl Detector {
+    pub fn candidates(&self, edges: &Mask, corners: &Mask) -> Quads {
+        let shapes = self.find_shapes(edges, corners);
+        let mut res = self.filter_quads(shapes);
 
-    let cfg = cfg();
+        if self.config.filter_ratios {
+            res = self.filter_ratios(res);
+        }
+        if self.config.filter_angles {
+            res = self.filter_angles(res);
+        }
+        if self.config.filter_enclosed {
+            res = self.filter_enclosed(res);
+        }
 
-    if cfg.filter_ratios {
-        res = filters::filter_ratios(res);
+        res
     }
-    if cfg.filter_angles {
-        res = filters::filter_angles(res);
-    }
-    if cfg.filter_enclosed {
-        res = filters::filter_enclosed(res);
-    }
-
-    res
 }

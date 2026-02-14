@@ -7,13 +7,13 @@ use opencv::{core, videoio, imgproc, highgui};
 use opencv::prelude::*;
 
 fn main() -> opencv::Result<()> {
-    let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY)?;
+    let mut cam = videoio::VideoCapture::new(2, videoio::CAP_ANY)?;
     highgui::named_window("webcam", highgui::WINDOW_AUTOSIZE)?;
 
     let mut last = Instant::now();
     let mut fps = 0.0;
 
-    dauntless::set_config(Config::default());
+    let detector = dauntless::Detector::new(Config::default());
 
     loop {
         let mut frame = Mat::default();
@@ -66,9 +66,9 @@ fn main() -> opencv::Result<()> {
         let data = Array2::from_shape_vec(
             (sh as usize, sw as usize),
             resized.data_bytes()?.to_vec(),
-        ).unwrap().mapv(|l| l as f32) / 255.0;
+        ).unwrap().mapv(|l| l as f32 / 255.0);
 
-        let tags = dauntless::tags(data);
+        let tags = detector.tags(&data);
 
         for tag in tags {
             let Tag { id, rot, pos, corners: (tl, tr, bl, br) } = tag;
