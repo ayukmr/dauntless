@@ -4,36 +4,43 @@ use crate::config::Config;
 use crate::types::Lightness;
 use crate::ws::{CannyWorkspace, HarrisWorkspace};
 
-use ndarray::Zip;
-
 const HARRIS_NEARBY: usize = 3;
 
 pub fn canny(config: &Config, img: &Lightness, ws: &mut CannyWorkspace) {
     oper::blur(img, &mut ws.bh, &mut ws.blur);
     oper::sobel(&ws.blur, &mut ws.gx, &mut ws.gy);
 
-    Zip::from(&mut ws.mag)
-        .and(&ws.gx)
-        .and(&ws.gy)
-        .for_each(|m, &gx, &gy| *m = (gx * gx + gy * gy).sqrt());
+    let ml = ws.mag.len();
+    let ol = ws.orient.len();
 
-    Zip::from(&mut ws.orient)
-        .and(&ws.gx)
-        .and(&ws.gy)
-        .for_each(|o, &gx, &gy| {
-            let ax = gx.abs();
-            let ay = gy.abs();
+    let gxs = ws.gx.as_slice_memory_order().unwrap();
+    let gys = ws.gy.as_slice_memory_order().unwrap();
+    let ms = ws.mag.as_slice_memory_order_mut().unwrap();
+    let os = ws.orient.as_slice_memory_order_mut().unwrap();
 
-            *o = if ay <= ax * 0.4142 {
-                (1, 0)
-            } else if ay >= ax * 2.4142 {
-                (1, 1)
-            } else if gx * gy > 0.0 {
-                (0, 1)
-            } else {
-                (1, -1)
-            };
-        });
+    for i in 0..ml {
+        let gx = gxs[i];
+        let gy = gys[i];
+        ms[i] = (gx * gx + gy * gy).sqrt();
+    }
+
+    for i in 0..ol {
+        let gx = gxs[i];
+        let gy = gys[i];
+
+        let ax = gx.abs();
+        let ay = gy.abs();
+
+        os[i] = if ay <= ax * 0.4142 {
+            (1, 0)
+        } else if ay >= ax * 2.4142 {
+            (1, 1)
+        } else if gx * gy > 0.0 {
+            (0, 1)
+        } else {
+            (1, -1)
+        };
+    }
 
     post::nms(&ws.mag, &ws.orient, &mut ws.supp);
     post::hysteresis(&config, &ws.supp, &mut ws.strong, &mut ws.weak, &mut ws.edges);
@@ -42,45 +49,44 @@ pub fn canny(config: &Config, img: &Lightness, ws: &mut CannyWorkspace) {
 pub fn harris(config: &Config, img: &Lightness, ws: &mut HarrisWorkspace) {
     oper::sobel(img, &mut ws.gx, &mut ws.gy);
 
-    rayon::scope(|s| {
-        s.spawn(|_| {
-            Zip::from(&mut ws.xx)
-                .and(&ws.gx)
-                .for_each(|xx, &gx| *xx = gx * gx);
+    let gxs = ws.gx.as_slice_memory_order().unwrap();
+    let gys = ws.gy.as_slice_memory_order().unwrap();
 
-            oper::blur(&ws.xx, &mut ws.bh1, &mut ws.sxx);
-        });
-        s.spawn(|_| {
-            Zip::from(&mut ws.yy)
-                .and(&ws.gy)
-                .for_each(|yy, &gy| *yy = gy * gy);
+    let xxs = ws.xx.as_slice_memory_order_mut().unwrap();
+    let yys = ws.yy.as_slice_memory_order_mut().unwrap();
+    let xys = ws.xy.as_slice_memory_order_mut().unwrap();
 
-            oper::blur(&ws.yy, &mut ws.bh2, &mut ws.syy);
-        });
-        s.spawn(|_| {
-            Zip::from(&mut ws.xy)
-                .and(&ws.gx)
-                .and(&ws.gy)
-                .for_each(|xy, &gx, &gy| *xy = gx * gy);
+    for i in 0..img.len() {
+        xxs[i] = gxs[i] * gxs[i];
+        yys[i] = gys[i] * gys[i];
+        xys[i] = gxs[i] * gys[i];
+    }
 
-            oper::blur(&ws.xy, &mut ws.bh3, &mut ws.sxy);
-        });
-    });
+    oper::blur(&ws.xx, &mut ws.bh, &mut ws.sxx);
+    oper::blur(&ws.yy, &mut ws.bh, &mut ws.syy);
+    oper::blur(&ws.xy, &mut ws.bh, &mut ws.sxy);
 
-    Zip::from(&mut ws.resp)
-        .and(&ws.sxx)
-        .and(&ws.syy)
-        .and(&ws.sxy)
-        .for_each(|r, &a, &b, &c| {
-            let det = a * b - c * c;
-            let trace = a + b;
-            *r = det - config.harris_k * trace * trace;
-        });
+    let sxxs = ws.sxx.as_slice_memory_order_mut().unwrap();
+    let syys = ws.syy.as_slice_memory_order_mut().unwrap();
+    let sxys = ws.sxy.as_slice_memory_order_mut().unwrap();
+    let rs = ws.resp.as_slice_memory_order_mut().unwrap();
+
+    for i in 0..img.len() {
+        let a = sxxs[i];
+        let b = syys[i];
+        let c = sxys[i];
+
+        let det = a * b - c * c;
+        let trace = a + b;
+        rs[i] = det - config.harris_k * trace * trace;
+    }
 
     let rmax = &ws.resp.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
     let thresh = config.harris_thresh * rmax;
 
     let (h, w) = ws.resp.dim();
+
+    ws.corners.fill(false);
 
     let rs = ws.resp.as_slice_memory_order().unwrap();
     let cs = ws.corners.as_slice_memory_order_mut().unwrap();

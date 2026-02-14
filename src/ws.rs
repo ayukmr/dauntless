@@ -23,9 +23,7 @@ pub struct HarrisWorkspace {
     pub xx: Lightness,
     pub yy: Lightness,
     pub xy: Lightness,
-    pub bh1: Lightness,
-    pub bh2: Lightness,
-    pub bh3: Lightness,
+    pub bh: Lightness,
     pub sxx: Lightness,
     pub syy: Lightness,
     pub sxy: Lightness,
@@ -60,9 +58,7 @@ impl HarrisWorkspace {
         ensure_f32(&mut self.xx, d);
         ensure_f32(&mut self.yy, d);
         ensure_f32(&mut self.xy, d);
-        ensure_f32(&mut self.bh1, d);
-        ensure_f32(&mut self.bh2, d);
-        ensure_f32(&mut self.bh3, d);
+        ensure_f32(&mut self.bh, d);
         ensure_f32(&mut self.sxx, d);
         ensure_f32(&mut self.syy, d);
         ensure_f32(&mut self.sxy, d);

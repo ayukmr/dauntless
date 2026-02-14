@@ -3,33 +3,39 @@ use crate::types::{Lightness, Mask};
 
 use std::collections::VecDeque;
 
-use ndarray::{Array2, Zip};
+use ndarray::Array2;
 
 pub fn nms(mag: &Lightness, orient: &Array2<(i8, i8)>, supp: &mut Lightness) {
     let (h, w) = mag.dim();
-    let ms = mag.as_slice_memory_order().unwrap();
 
-    Zip::indexed(supp)
-        .and(mag)
-        .and(orient)
-        .for_each(|(y, x), s, &cur, &(dx, dy)| {
+    let ms = mag.as_slice_memory_order().unwrap();
+    let os = orient.as_slice_memory_order().unwrap();
+    let ss = supp.as_slice_memory_order_mut().unwrap();
+
+    for y in 0..h {
+        for x in 0..w {
+            let i = x + y * w;
+
             if x == 0 || y == 0 || x == w - 1 || y == h - 1 {
-                *s = 0.0;
-                return;
+                ss[i] = 0.0;
+                continue;
             }
 
-            let i = x + y * w;
+            let cur = ms[i];
+            let (dx, dy) = os[i];
+
             let d = (dx as i32 + dy as i32 * w as i32) as usize;
 
             let n1 = ms[i - d];
             let n2 = ms[i + d];
 
-            *s = if cur >= n1 && cur >= n2 {
+            ss[i] = if cur >= n1 && cur >= n2 {
                 cur
             } else {
                 0.0
             };
-        });
+        }
+    }
 }
 
 pub fn hysteresis(config: &Config, edges: &Lightness, strong: &mut Mask, weak: &mut Mask, out: &mut Mask) {
