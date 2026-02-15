@@ -1,9 +1,8 @@
-use ndarray::Array2;
+use std::time::Instant;
 use image::imageops::{self, FilterType};
 
 fn main() {
-    let img = image::open("data/3.jpg").unwrap();
-
+    let img = image::open("data/4.jpg").unwrap();
     let light = img.to_luma8();
 
     let (w, h) = light.dimensions();
@@ -19,13 +18,32 @@ fn main() {
         FilterType::Triangle,
     );
 
-    let data = Array2::from_shape_vec(
-        (sh, sw),
-        resized.into_vec(),
-    ).unwrap().mapv(|l| l as f32) / 255.0;
+    let data =
+        &resized
+            .into_vec()
+            .into_iter()
+            .map(|l| l as f32 / 255.0)
+            .collect();
 
     let mut detector = dauntless::Detector::default();
 
-    let tags = detector.tags(&data);
-    println!("{:?}", tags);
+    let runs = 1000;
+
+    let mut times = [0.0; 1000];
+
+    for i in 0..runs {
+        let start = Instant::now();
+        let _ = detector.tags(sw, sh, &data);
+        let ms = start.elapsed().as_secs_f32() * 1000.0;
+
+        print!("\r{:.2} ms", ms);
+        std::io::Write::flush(&mut std::io::stdout()).unwrap();
+
+        times[i] = ms;
+    }
+
+    let avg = times.iter().sum::<f32>() / runs as f32;
+
+    println!("\navg ms {:.2}", avg);
+    println!("\navg fps {:.2}", 1000.0 / avg);
 }

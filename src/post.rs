@@ -1,35 +1,30 @@
 use crate::config::Config;
-use crate::types::{Lightness, Mask};
+use crate::types::{Dim, Lightness, Mask};
 
 use std::collections::VecDeque;
 
-use ndarray::Array2;
-
-pub fn nms(mag: &Lightness, orient: &Array2<(i8, i8)>, supp: &mut Lightness) {
-    let (h, w) = mag.dim();
-
-    let ms = mag.as_slice_memory_order().unwrap();
-    let os = orient.as_slice_memory_order().unwrap();
-    let ss = supp.as_slice_memory_order_mut().unwrap();
+pub fn nms(dim: Dim, mag: &Lightness, orient: &Vec<(i8, i8)>, supp: &mut Lightness) {
+    let w = dim.w;
+    let h = dim.h;
 
     for y in 0..h {
         for x in 0..w {
             let i = x + y * w;
 
             if x == 0 || y == 0 || x == w - 1 || y == h - 1 {
-                ss[i] = 0.0;
+                supp[i] = 0.0;
                 continue;
             }
 
-            let cur = ms[i];
-            let (dx, dy) = os[i];
+            let cur = mag[i];
+            let (dx, dy) = orient[i];
 
             let d = (dx as i32 + dy as i32 * w as i32) as usize;
 
-            let n1 = ms[i - d];
-            let n2 = ms[i + d];
+            let n1 = mag[i - d];
+            let n2 = mag[i + d];
 
-            ss[i] = if cur >= n1 && cur >= n2 {
+            supp[i] = if cur >= n1 && cur >= n2 {
                 cur
             } else {
                 0.0
@@ -38,20 +33,22 @@ pub fn nms(mag: &Lightness, orient: &Array2<(i8, i8)>, supp: &mut Lightness) {
     }
 }
 
-pub fn hysteresis(config: &Config, edges: &Lightness, strong: &mut Mask, weak: &mut Mask, out: &mut Mask) {
-    let max = edges.fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+pub fn hysteresis(
+    config: &Config,
+    dim: Dim,
+    edges: &Lightness,
+    strong: &mut Mask,
+    weak: &mut Mask,
+    dq: &mut VecDeque<(usize, usize)>,
+    out: &mut Mask,
+) {
+    let max = edges.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 
     let high = config.hyst_high * max;
     let low = config.hyst_low * max;
 
-    let mut dq = VecDeque::new();
-
-    let (h, w) = edges.dim();
-
-    let es = edges.as_slice_memory_order().unwrap();
-    let ss = strong.as_slice_memory_order_mut().unwrap();
-    let ws = weak.as_slice_memory_order_mut().unwrap();
-    let os = out.as_slice_memory_order_mut().unwrap();
+    let w = dim.w;
+    let h = dim.h;
 
     for y in 0..h {
         let r = y * w;
@@ -59,16 +56,16 @@ pub fn hysteresis(config: &Config, edges: &Lightness, strong: &mut Mask, weak: &
         for x in 0..w {
             let i = x + r;
 
-            let v = es[i];
+            let v = edges[i];
 
             let str = v > high;
             let wk = v > low && v <= high;
 
-            ss[i] = str;
-            ws[i] = wk;
-            os[i] = str;
+            strong[i] = if str { 1 } else { 0 };
+            weak[i] = if wk { 1 } else { 0 };
+            out[i] = if str { 1 } else { 0 };
 
-            if ss[i] {
+            if str {
                 dq.push_back((y, x));
             }
         }
@@ -81,8 +78,8 @@ pub fn hysteresis(config: &Config, edges: &Lightness, strong: &mut Mask, weak: &
             for nx in x.saturating_sub(1)..=(x + 1).min(w - 1) {
                 let i = nx + r;
 
-                if ws[i] && !os[i] {
-                    os[i] = true;
+                if weak[i] == 1 && out[i] == 0 {
+                    out[i] = 1;
                     dq.push_back((ny, nx));
                 }
             }

@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::types::Dim;
 use crate::ws::{CannyWorkspace, HarrisWorkspace};
 
 #[derive(Default)]
@@ -17,8 +18,8 @@ impl Detector {
         }
     }
 
-    pub fn ensure(&mut self, h: usize, w: usize) {
-        self.cws.ensure(h, w);
-        self.hws.ensure(h, w);
+    pub fn ensure(&mut self, dim: Dim) {
+        self.cws.ensure(dim);
+        self.hws.ensure(dim);
     }
 }

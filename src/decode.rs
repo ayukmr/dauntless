@@ -1,8 +1,6 @@
-use crate::types::{Lightness, Corners, FCorners};
+use crate::types::{Bits, Corners, Dim, FCorners, Lightness};
 
 use std::cmp::Ordering;
-
-use ndarray::{s, Array2};
 
 const BIT_THRESH: f32 = 0.5;
 const ERR_THRESH: u32 = 2;
@@ -22,16 +20,20 @@ const CODES: [u64; 11] = [
     14225578886,
 ];
 
-pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
-    let tag = sample(img, corners)?;
+pub fn decode(dim: Dim, img: &Lightness, corners: Corners) -> Option<u32> {
+    let tag = sample(dim, img, corners)?;
 
-    let mut vals = tag.clone().flatten().to_vec();
+    let mut vals = tag.clone().to_vec();
     vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
 
     let min = vals[..N_MEANS].iter().sum::<f32>() / N_MEANS as f32;
     let max = vals[vals.len() - N_MEANS..].iter().sum::<f32>() / N_MEANS as f32;
 
-    let mut bits = (&(tag - min) / (max - min)).mapv(|l| l > BIT_THRESH);
+    let mut bits =
+        tag
+            .into_iter()
+            .map(|x| (x - min / (max - min)) > BIT_THRESH)
+            .collect::<Bits>();
 
     let mut best: Option<(usize, u32)> = None;
 
@@ -53,17 +55,25 @@ pub fn decode(img: &Lightness, corners: Corners) -> Option<u32> {
             }
         }
 
-        bits = rot90(bits);
+        bits = rot90(bits, 6);
     }
 
     best.map(|(i, _)| i as u32)
 }
 
-fn rot90<T: Clone>(a: Array2<T>) -> Array2<T> {
-    a.slice(s![..;-1, ..]).reversed_axes().to_owned()
+fn rot90(a: Bits, n: usize) -> Bits {
+    let mut out = vec![false; n * n];
+
+    for y in 0..n {
+        for x in 0..n {
+            out[x * n + (n - 1 - y)] = a[y * n + x];
+        }
+    }
+
+    out
 }
 
-fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
+fn sample(dim: Dim, img: &Lightness, corners: Corners) -> Option<Lightness> {
     let hm = Homography::from_corners((
         (corners.0.0 as f32, corners.0.1 as f32),
         (corners.1.0 as f32, corners.1.1 as f32),
@@ -73,6 +83,8 @@ fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
 
     let mut out = vec![0.0; 36];
 
+    let w = dim.w;
+
     for y in 0..6 {
         for x in 0..6 {
             let u = (x as f32 + 1.5) / 8.0;
@@ -80,15 +92,18 @@ fn sample(img: &Lightness, corners: Corners) -> Option<Array2<f32>> {
 
             let (ix, iy) = hm.map(u, v);
 
-            let px = ix.floor() as isize;
-            let py = iy.floor() as isize;
+            let i = ix.floor() as usize + iy.floor() as usize * w;
 
-            let val = img.slice(s![py - 1..=py + 1, px - 1..=px + 1]);
-            out[x + y * 6] = val.sum() / val.len() as f32;
+            let val =
+                  img[i - 1 - w] + img[i - w] + img[i + 1 - w]
+                + img[i - 1]     + img[i]     + img[i + 1]
+                + img[i - 1 + w] + img[i + w] + img[i + 1 + w];
+
+            out[x + y * 6] = val / 9 as f32;
         }
     }
 
-    Some(Array2::from_shape_vec((6, 6), out).unwrap())
+    Some(out)
 }
 
 struct Homography {

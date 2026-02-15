@@ -1,6 +1,6 @@
-use ndarray::Array2;
+use std::collections::VecDeque;
 
-use crate::types::{Lightness, Mask};
+use crate::types::{Dim, Lightness, Mask};
 
 #[derive(Default)]
 pub struct CannyWorkspace {
@@ -9,11 +9,12 @@ pub struct CannyWorkspace {
     pub gx: Lightness,
     pub gy: Lightness,
     pub mag: Lightness,
-    pub orient: Array2<(i8, i8)>,
+    pub orient: Vec<(i8, i8)>,
     pub supp: Lightness,
     pub strong: Mask,
     pub weak: Mask,
     pub edges: Mask,
+    pub dq: VecDeque<(usize, usize)>,
 }
 
 #[derive(Default)]
@@ -32,56 +33,56 @@ pub struct HarrisWorkspace {
 }
 
 impl CannyWorkspace {
-    pub fn ensure(&mut self, h: usize, w: usize) {
-        let d = (h, w);
+    pub fn ensure(&mut self, dim: Dim) {
+        let l = dim.len();
 
-        ensure_f32(&mut self.bh, d);
-        ensure_f32(&mut self.blur, d);
-        ensure_f32(&mut self.gx, d);
-        ensure_f32(&mut self.gy, d);
-        ensure_f32(&mut self.mag, d);
-        ensure_orient(&mut self.orient, d);
-        ensure_f32(&mut self.supp, d);
+        ensure_f32(&mut self.bh, l);
+        ensure_f32(&mut self.blur, l);
+        ensure_f32(&mut self.gx, l);
+        ensure_f32(&mut self.gy, l);
+        ensure_f32(&mut self.mag, l);
+        ensure_orient(&mut self.orient, l);
+        ensure_f32(&mut self.supp, l);
 
-        ensure_bool(&mut self.strong, d);
-        ensure_bool(&mut self.weak, d);
-        ensure_bool(&mut self.edges, d);
+        ensure_u8(&mut self.strong, l);
+        ensure_u8(&mut self.weak, l);
+        ensure_u8(&mut self.edges, l);
     }
 }
 
 impl HarrisWorkspace {
-    pub fn ensure(&mut self, h: usize, w: usize) {
-        let d = (h, w);
+    pub fn ensure(&mut self, dim: Dim) {
+        let l = dim.len();
 
-        ensure_f32(&mut self.gx, d);
-        ensure_f32(&mut self.gy, d);
-        ensure_f32(&mut self.xx, d);
-        ensure_f32(&mut self.yy, d);
-        ensure_f32(&mut self.xy, d);
-        ensure_f32(&mut self.bh, d);
-        ensure_f32(&mut self.sxx, d);
-        ensure_f32(&mut self.syy, d);
-        ensure_f32(&mut self.sxy, d);
-        ensure_f32(&mut self.resp, d);
+        ensure_f32(&mut self.gx, l);
+        ensure_f32(&mut self.gy, l);
+        ensure_f32(&mut self.xx, l);
+        ensure_f32(&mut self.yy, l);
+        ensure_f32(&mut self.xy, l);
+        ensure_f32(&mut self.bh, l);
+        ensure_f32(&mut self.sxx, l);
+        ensure_f32(&mut self.syy, l);
+        ensure_f32(&mut self.sxy, l);
+        ensure_f32(&mut self.resp, l);
 
-        ensure_bool(&mut self.corners, d);
+        ensure_u8(&mut self.corners, l);
     }
 }
 
-fn ensure_f32(a: &mut Array2<f32>, dim: (usize, usize)) {
-    if a.dim() != dim {
-        *a = Array2::zeros(dim);
+fn ensure_f32(a: &mut Vec<f32>, len: usize) {
+    if a.len() != len {
+        *a = vec![0.0; len];
     }
 }
 
-fn ensure_bool(a: &mut Array2<bool>, dim: (usize, usize)) {
-    if a.dim() != dim {
-        *a = Array2::from_elem(dim, false);
+fn ensure_u8(a: &mut Vec<u8>, len: usize) {
+    if a.len() != len {
+        *a = vec![0; len];
     }
 }
 
-fn ensure_orient(a: &mut Array2<(i8, i8)>, dim: (usize, usize)) {
-    if a.dim() != dim {
-        *a = Array2::from_elem(dim, (0, 0));
+fn ensure_orient(a: &mut Vec<(i8, i8)>, len: usize) {
+    if a.len() != len {
+        *a = vec![(0, 0); len];
     }
 }

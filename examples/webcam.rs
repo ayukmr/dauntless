@@ -1,7 +1,6 @@
 use dauntless::Tag;
 
 use std::time::Instant;
-use ndarray::Array2;
 
 use opencv::{core, videoio, imgproc, highgui};
 use opencv::prelude::*;
@@ -63,12 +62,15 @@ fn main() -> opencv::Result<()> {
             imgproc::INTER_LINEAR,
         )?;
 
-        let data = Array2::from_shape_vec(
-            (sh as usize, sw as usize),
-            resized.data_bytes()?.to_vec(),
-        ).unwrap().mapv(|l| l as f32 / 255.0);
+        let data =
+            &resized
+                .data_bytes()?
+                .to_vec()
+                .into_iter()
+                .map(|l| l as f32 / 255.0)
+                .collect();
 
-        let tags = detector.tags(&data);
+        let tags = detector.tags(sw as usize, sh as usize, data);
 
         for tag in tags {
             let Tag { id, rot, pos, corners: (tl, tr, bl, br) } = tag;
@@ -118,6 +120,40 @@ fn main() -> opencv::Result<()> {
                     0
                 )?;
             }
+
+            let tlr = (tl.0 as f32, tl.1 as f32);
+            let trr = (tr.0 as f32, tr.1 as f32);
+            let blr = (bl.0 as f32, bl.1 as f32);
+            let brr = (br.0 as f32, br.1 as f32);
+
+            let sx = w as f32 / sw as f32;
+            let sy = h as f32 / sh as f32;
+
+            let tlf = (tlr.0 * sx, tlr.1 * sy);
+            let trf = (trr.0 * sx, trr.1 * sy);
+            let blf = (blr.0 * sx, blr.1 * sy);
+            let brf = (brr.0 * sx, brr.1 * sy);
+
+            let hm = Homography::from_corners((tlf, trf, blf, brf));
+
+            for gy in 0..6 {
+                for gx in 0..6 {
+                    let u = (gx as f32 + 1.5) / 8.0;
+                    let v = (gy as f32 + 1.5) / 8.0;
+
+                    let (x, y) = hm.map(u, v);
+
+                    imgproc::circle(
+                        &mut frame,
+                        core::Point::new(x.round() as i32, y.round() as i32),
+                        3,
+                        core::Scalar::new(0.0, 255.0, 0.0, 0.0),
+                        -1,
+                        imgproc::LINE_8,
+                        0,
+                    )?;
+                }
+            }
         }
 
         highgui::imshow("webcam", &frame)?;
@@ -153,4 +189,45 @@ fn show_text(frame: &mut Mat, label: &str, x: i32, y: i32) -> opencv::Result<()>
         imgproc::LINE_8,
         false,
     )
+}
+
+struct Homography {
+    mat: [f32; 9],
+}
+
+impl Homography {
+    fn from_corners(corners: ((f32, f32), (f32, f32), (f32, f32), (f32, f32))) -> Homography {
+        let ((x0, y0), (x1, y1), (x2, y2), (x3, y3)) = corners;
+
+        let dx1 = x1 - x3;
+        let dx2 = x2 - x3;
+        let dx3 = x0 - x1 + x3 - x2;
+
+        let dy1 = y1 - y3;
+        let dy2 = y2 - y3;
+        let dy3 = y0 - y1 + y3 - y2;
+
+        let denom = dx1 * dy2 - dx2 * dy1;
+
+        let g = (dx3 * dy2 - dx2 * dy3) / denom;
+        let h = (dx1 * dy3 - dx3 * dy1) / denom;
+
+        Homography {
+            mat: [
+                x1 - x0 + g * x1, x2 - x0 + h * x2, x0,
+                y1 - y0 + g * y1, y2 - y0 + h * y2, y0,
+                g, h, 1.0,
+            ],
+        }
+    }
+
+    fn map(&self, u: f32, v: f32) -> (f32, f32) {
+        let m = &self.mat;
+
+        let x = m[0] * u + m[1] * v + m[2];
+        let y = m[3] * u + m[4] * v + m[5];
+        let w = m[6] * u + m[7] * v + m[8];
+
+        (x / w, y / w)
+    }
 }

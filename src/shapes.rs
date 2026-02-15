@@ -1,23 +1,18 @@
 use crate::uf::UnionFind;
-use crate::types::{Mask, Quads, Shapes};
+use crate::types::{Dim, Mask, Quads, Shapes};
 
-use ndarray::Array2;
-
-pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
+pub fn find_shapes(dim: Dim, edges: &Mask, corners: &Mask) -> Shapes {
     let mut corners = corners.clone();
 
-    let mut labels = Array2::from_elem(edges.dim(), 0);
+    let mut labels = vec![0; edges.len()];
     let mut label_pts = vec![Vec::new()];
 
     let mut next_label = 0;
 
-    let (h, w) = edges.dim();
-
     let mut uf = UnionFind::new();
 
-    let es = edges.as_slice_memory_order().unwrap();
-    let cs = corners.as_slice_memory_order_mut().unwrap();
-    let ls = labels.as_slice_memory_order_mut().unwrap();
+    let w = dim.w;
+    let h = dim.h;
 
     for y in 2..h - 2 {
         let r = y * w;
@@ -25,7 +20,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
         for x in 2..w - 2 {
             let i = x + r;
 
-            if !es[i] {
+            if edges[i] == 0 {
                 continue;
             }
 
@@ -38,7 +33,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                 for xx in (x - 2)..=xx_end {
                     let ii = xx + rr;
 
-                    let nid = ls[ii];
+                    let nid = labels[ii];
                     if nid == 0 {
                         continue;
                     }
@@ -60,7 +55,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                     next_label
                 }
             };
-            ls[i] = id;
+            labels[i] = id;
 
             let mut corner = None;
 
@@ -70,7 +65,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
                 for xx in (x - 1)..=(x + 1) {
                     let ii = xx + rr;
 
-                    if cs[ii] {
+                    if corners[ii] == 1 {
                         corner = Some((yy, xx));
                         break;
                     }
@@ -83,7 +78,7 @@ pub fn find_shapes(edges: &Mask, corners: &Mask) -> Shapes {
 
             if let Some((cy, cx)) = corner {
                 label_pts[id as usize].push((cx as u32, cy as u32));
-                cs[cx + cy * w] = false;
+                corners[cx + cy * w] = 0;
             }
         }
     }

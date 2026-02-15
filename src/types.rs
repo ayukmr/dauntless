@@ -1,5 +1,3 @@
-use ndarray::Array2;
-
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tag {
@@ -9,8 +7,21 @@ pub struct Tag {
     pub corners: Corners,
 }
 
-pub type Lightness = Array2<f32>;
-pub type Mask = Array2<bool>;
+#[derive(Clone, Copy)]
+pub struct Dim {
+    pub w: usize,
+    pub h: usize,
+}
+
+impl Dim {
+    pub fn len(&self) -> usize {
+        return self.w * self.h;
+    }
+}
+
+pub type Lightness = Vec<f32>;
+pub type Mask = Vec<u8>;
+pub type Bits = Vec<bool>;
 
 pub type Point = (u32, u32);
 pub type Corners = (Point, Point, Point, Point);
