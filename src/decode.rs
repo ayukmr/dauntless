@@ -1,4 +1,5 @@
-use crate::types::{Bits, Corners, Dim, FCorners, Lightness};
+use crate::types::{Bits, Corners, Dim, Lightness, Point2D};
+use crate::hm::Homography;
 
 use std::cmp::Ordering;
 
@@ -6,18 +7,16 @@ const BIT_THRESH: f32 = 0.5;
 const ERR_THRESH: u32 = 2;
 const N_MEANS: usize = 5;
 
-const CODES: [u64; 11] = [
-    57401312644,
-    58383764297,
-    59366215950,
-    61331119256,
-    63296022562,
-    65260925868,
-    1453707397,
-    4401062356,
-    9313320621,
-    10295772274,
-    14225578886,
+const CODES: [u64; 33] = [
+    57401312644, 58383764297, 59366215950, 61331119256,
+    63296022562, 65260925868,  1453707397,  4401062356,
+     9313320621, 10295772274, 14225578886, 17172933845,
+    18155385498, 19137837151, 21102740457, 22085192110,
+    24050095416, 27979902028, 28962353681, 33874611946,
+    34857063599, 35839515252, 37804418558, 42716676823,
+    43699128476, 46646483435, 47628935088, 49593838394,
+    56470999965, 57453451618, 61383258230, 12312814554,
+    18207524472,
 ];
 
 pub fn decode(dim: Dim, img: &Lightness, corners: Corners) -> Option<u32> {
@@ -32,7 +31,7 @@ pub fn decode(dim: Dim, img: &Lightness, corners: Corners) -> Option<u32> {
     let mut bits =
         tag
             .into_iter()
-            .map(|x| (x - min / (max - min)) > BIT_THRESH)
+            .map(|x| (x - min) / (max - min) > BIT_THRESH)
             .collect::<Bits>();
 
     let mut best: Option<(usize, u32)> = None;
@@ -75,10 +74,10 @@ fn rot90(a: Bits, n: usize) -> Bits {
 
 fn sample(dim: Dim, img: &Lightness, corners: Corners) -> Option<Lightness> {
     let hm = Homography::from_corners((
-        (corners.0.0 as f32, corners.0.1 as f32),
-        (corners.1.0 as f32, corners.1.1 as f32),
-        (corners.2.0 as f32, corners.2.1 as f32),
-        (corners.3.0 as f32, corners.3.1 as f32),
+        Point2D(corners.0.0, corners.0.1),
+        Point2D(corners.1.0, corners.1.1),
+        Point2D(corners.2.0, corners.2.1),
+        Point2D(corners.3.0, corners.3.1),
     ));
 
     let mut out = vec![0.0; 36];
@@ -87,62 +86,29 @@ fn sample(dim: Dim, img: &Lightness, corners: Corners) -> Option<Lightness> {
 
     for y in 0..6 {
         for x in 0..6 {
-            let u = (x as f32 + 1.5) / 8.0;
-            let v = (y as f32 + 1.5) / 8.0;
+            let u = (x as f64 + 1.5) / 8.0;
+            let v = (y as f64 + 1.5) / 8.0;
 
-            let (ix, iy) = hm.map(u, v);
+            let Point2D(ix, iy) = hm.map(u, v);
 
             let i = ix.floor() as usize + iy.floor() as usize * w;
 
-            let val =
-                  img[i - 1 - w] + img[i - w] + img[i + 1 - w]
-                + img[i - 1]     + img[i]     + img[i + 1]
-                + img[i - 1 + w] + img[i + w] + img[i + 1 + w];
+            let dx = corners.0.0 - corners.1.0;
+            let dy = corners.0.1 - corners.1.1;
+            let neighbors = dx * dx + dy * dy >= 256.0;
 
-            out[x + y * 6] = val / 9 as f32;
+            let val =
+                if neighbors {
+                      img[i - 1 - w] + img[i - w] + img[i + 1 - w]
+                    + img[i - 1]     + img[i]     + img[i + 1]
+                    + img[i - 1 + w] + img[i + w] + img[i + 1 + w]
+                } else {
+                    img[i]
+                };
+
+            out[x + y * 6] = val / 9_f32;
         }
     }
 
     Some(out)
-}
-
-struct Homography {
-    mat: [f32; 9],
-}
-
-impl Homography {
-    fn from_corners(
-        ((x0, y0), (x1, y1), (x2, y2), (x3, y3)): FCorners,
-    ) -> Homography {
-        let dx1 = x1 - x3;
-        let dx2 = x2 - x3;
-        let dx3 = x0 - x1 + x3 - x2;
-
-        let dy1 = y1 - y3;
-        let dy2 = y2 - y3;
-        let dy3 = y0 - y1 + y3 - y2;
-
-        let denom = dx1 * dy2 - dx2 * dy1;
-
-        let g = (dx3 * dy2 - dx2 * dy3) / denom;
-        let h = (dx1 * dy3 - dx3 * dy1) / denom;
-
-        Homography {
-            mat: [
-                x1 - x0 + g * x1, x2 - x0 + h * x2, x0,
-                y1 - y0 + g * y1, y2 - y0 + h * y2, y0,
-                g, h, 1.0,
-            ],
-        }
-    }
-
-    fn map(&self, u: f32, v: f32) -> (f32, f32) {
-        let m = &self.mat;
-
-        let x = m[0] * u + m[1] * v + m[2];
-        let y = m[3] * u + m[4] * v + m[5];
-        let w = m[6] * u + m[7] * v + m[8];
-
-        (x / w, y / w)
-    }
 }

@@ -1,5 +1,5 @@
 use crate::uf::UnionFind;
-use crate::types::{Dim, Mask, Quads, Shapes};
+use crate::types::{Dim, Mask, Point2D, Quads, Shapes};
 
 pub fn find_shapes(dim: Dim, edges: &Mask, corners: &Mask) -> Shapes {
     let mut corners = corners.clone();
@@ -77,7 +77,7 @@ pub fn find_shapes(dim: Dim, edges: &Mask, corners: &Mask) -> Shapes {
             }
 
             if let Some((cy, cx)) = corner {
-                label_pts[id as usize].push((cx as u32, cy as u32));
+                label_pts[id as usize].push(Point2D(cx as f64, cy as f64));
                 corners[cx + cy * w] = 0;
             }
         }

@@ -3,7 +3,7 @@ use crate::types::{Dim, Lightness, Mask};
 
 use std::collections::VecDeque;
 
-pub fn nms(dim: Dim, mag: &Lightness, orient: &Vec<(i8, i8)>, supp: &mut Lightness) {
+pub fn nms(dim: Dim, mag: &Lightness, orient: &[(i8, i8)], supp: &mut Lightness) {
     let w = dim.w;
     let h = dim.h;
 
@@ -19,10 +19,11 @@ pub fn nms(dim: Dim, mag: &Lightness, orient: &Vec<(i8, i8)>, supp: &mut Lightne
             let cur = mag[i];
             let (dx, dy) = orient[i];
 
-            let d = (dx as i32 + dy as i32 * w as i32) as usize;
+            let i1 = ((x as isize - dx as isize) + (y as isize - dy as isize) * w as isize) as usize;
+            let i2 = ((x as isize + dx as isize) + (y as isize + dy as isize) * w as isize) as usize;
 
-            let n1 = mag[i - d];
-            let n2 = mag[i + d];
+            let n1 = mag[i1];
+            let n2 = mag[i2];
 
             supp[i] = if cur >= n1 && cur >= n2 {
                 cur
@@ -49,6 +50,8 @@ pub fn hysteresis(
 
     let w = dim.w;
     let h = dim.h;
+
+    dq.clear();
 
     for y in 0..h {
         let r = y * w;

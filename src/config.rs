@@ -22,9 +22,9 @@ impl Default for Config {
             fov_rad: 75.0_f32.to_radians(),
 
             harris_k: 0.01,
-            harris_thresh: 0.05,
+            harris_thresh: 0.0125,
 
-            hyst_low: 0.0125,
+            hyst_low: 0.025,
             hyst_high: 0.05,
 
             filter_ratios: true,

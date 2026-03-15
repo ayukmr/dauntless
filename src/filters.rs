@@ -1,9 +1,9 @@
 use std::f32;
 
-use crate::types::{Corners, Point, Quads};
+use crate::types::{Corners, Point2D, Quads};
 
 const MAX_RATIO: f32 = 1.3;
-const VH_MAX_RATIO: f32 = 1.5;
+const VH_MAX_RATIO: f32 = 6.0;
 
 pub fn filter_ratios(quads: Quads) -> Quads {
     quads
@@ -25,7 +25,7 @@ pub fn filter_ratios(quads: Quads) -> Quads {
         .collect()
 }
 
-fn dist(a: &Point, b: &Point) -> f32 {
+fn dist(a: &Point2D, b: &Point2D) -> f32 {
     let dx = a.0 as f32 - b.0 as f32;
     let dy = a.1 as f32 - b.1 as f32;
 
@@ -89,17 +89,17 @@ pub fn filter_enclosed(quads: Quads) -> Quads {
 }
 
 struct Bounds {
-    l: u32,
-    r: u32,
-    t: u32,
-    b: u32,
+    l: f64,
+    r: f64,
+    t: f64,
+    b: f64,
 }
 
 fn bounds((tl, tr, bl, br): &Corners) -> Bounds {
-    let l = u32::min(tl.0, bl.0);
-    let r = u32::max(tr.0, br.0);
-    let t = u32::min(tl.1, tr.1);
-    let b = u32::max(bl.1, br.1);
+    let l = f64::min(tl.0, bl.0);
+    let r = f64::max(tr.0, br.0);
+    let t = f64::min(tl.1, tr.1);
+    let b = f64::max(bl.1, br.1);
 
     Bounds { l, r, t, b }
 }

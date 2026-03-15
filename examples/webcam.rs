@@ -77,11 +77,20 @@ fn main() -> opencv::Result<()> {
 
             let corners = [tl, tr, br, bl];
 
-            let xs: Vec<u32> = corners.iter().map(|pt| pt.0).collect();
-            let ys: Vec<u32> = corners.iter().map(|pt| pt.1).collect();
+            let xs: Vec<f64> = corners.iter().map(|pt| pt.0).collect();
+            let ys: Vec<f64> = corners.iter().map(|pt| pt.1).collect();
 
-            let x = (xs.iter().min().unwrap() + xs.iter().max().unwrap()) / 2;
-            let y = (ys.iter().min().unwrap() + ys.iter().max().unwrap()) / 2;
+            let (xmin, xmax) = xs.iter().copied().fold(
+                (f64::INFINITY, f64::NEG_INFINITY),
+                |(min, max), x| (min.min(x), max.max(x)),
+            );
+            let (ymin, ymax) = ys.iter().copied().fold(
+                (f64::INFINITY, f64::NEG_INFINITY),
+                |(min, max), x| (min.min(x), max.max(x)),
+            );
+
+            let x = (xmin + xmax) / 2.0;
+            let y = (ymin + ymax) / 2.0;
 
             let label = if let Some(id) = id {
                 format!("{}, {}, {:?}", id, rot.to_degrees() as i32, pos)

@@ -4,8 +4,6 @@ use crate::config::Config;
 use crate::types::{Dim, Lightness};
 use crate::ws::{CannyWorkspace, HarrisWorkspace};
 
-const HARRIS_NEARBY: usize = 3;
-
 pub fn canny(config: &Config, dim: Dim, img: &Lightness, ws: &mut CannyWorkspace) {
     oper::blur(dim, img, &mut ws.bh, &mut ws.blur);
     oper::sobel(dim, &ws.blur, &mut ws.gx, &mut ws.gy);
@@ -61,34 +59,9 @@ pub fn harris(config: &Config, dim: Dim, img: &Lightness, ws: &mut HarrisWorkspa
         ws.resp[i] = det - config.harris_k * trace * trace;
     }
 
-    let rmax = ws.resp.iter_mut().fold(f32::NEG_INFINITY, |a, b| a.max(*b));
-    let thresh = config.harris_thresh * rmax;
+    let thresh = config.harris_thresh;
 
-    ws.corners.fill(0);
-
-    let w = dim.w;
-    let h = dim.h;
-
-    for y in HARRIS_NEARBY..h - HARRIS_NEARBY {
-        let r = y * w;
-
-        for x in HARRIS_NEARBY..w - HARRIS_NEARBY {
-            let i = x + r;
-
-            let v = ws.resp[i];
-            if v <= thresh {
-                continue;
-            }
-
-            let is_max =
-                !(y - HARRIS_NEARBY..=y + HARRIS_NEARBY).any(|yy| {
-                    let rr = yy * w;
-                    (x - HARRIS_NEARBY..=x + HARRIS_NEARBY).any(|xx| ws.resp[xx + rr] > v)
-                });
-
-            if is_max {
-                ws.corners[i] = 1;
-            }
-        }
+    for i in 0..dim.len() {
+        ws.corners[i] = if ws.resp[i] > thresh { 1 } else { 0 };
     }
 }
