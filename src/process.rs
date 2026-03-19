@@ -12,10 +12,15 @@ impl Detector {
         let dim = Dim { w, h };
         self.ensure(dim);
 
+        #[cfg(feature = "rayon")]
         rayon::join(
             || mask::canny(&self.config, dim, data, &mut self.cws),
             || mask::harris(&self.config, dim, data, &mut self.hws),
         );
+
+        #[cfg(not(feature = "rayon"))]
+        mask::canny(&self.config, dim, data, &mut self.cws);
+        mask::harris(&self.config, dim, data, &mut self.hws);
 
         let edges = &self.cws.edges;
         let corners = &self.hws.corners;
