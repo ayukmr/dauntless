@@ -1,5 +1,5 @@
-use crate::types::{Bits, Corners, Dim, Lightness, Point2D};
 use crate::hm::Homography;
+use crate::types::{Bits, Corners, Dim, Lightness, Point2D};
 
 use std::cmp::Ordering;
 

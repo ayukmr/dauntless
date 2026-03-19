@@ -1,6 +1,6 @@
-use std::f32;
-
 use crate::types::{Corners, Point2D, Quads};
+
+use std::f32;
 
 const MAX_RATIO: f32 = 1.3;
 const VH_MAX_RATIO: f32 = 6.0;

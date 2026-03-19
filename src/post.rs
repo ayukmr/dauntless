@@ -25,11 +25,7 @@ pub fn nms(dim: Dim, mag: &Lightness, orient: &[(i8, i8)], supp: &mut Lightness)
             let n1 = mag[i1];
             let n2 = mag[i2];
 
-            supp[i] = if cur >= n1 && cur >= n2 {
-                cur
-            } else {
-                0.0
-            };
+            supp[i] = if cur >= n1 && cur >= n2 { cur } else { 0.0 };
         }
     }
 }

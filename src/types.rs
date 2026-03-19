@@ -27,6 +27,16 @@ pub type Bits = Vec<bool>;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Point2D(pub f64, pub f64);
 
+impl Point2D {
+    pub fn min(&self, o: Point2D, k: &dyn Fn(Point2D) -> f64) -> Point2D {
+        if k(*self) < k(o) { *self } else { o }
+    }
+
+    pub fn max(&self, o: Point2D, k: &dyn Fn(Point2D) -> f64) -> Point2D {
+        if k(*self) > k(o) { *self } else { o }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Point3D(pub f64, pub f64, pub f64);
@@ -59,6 +69,3 @@ impl Point3D {
 
 pub type Corners = (Point2D, Point2D, Point2D, Point2D);
 pub type Quads = Vec<Corners>;
-
-pub type Points = Vec<Point2D>;
-pub type Shapes = Vec<Points>;

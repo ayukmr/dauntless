@@ -1,6 +1,5 @@
 use crate::{candidates, decode, mask};
 use crate::detector::Detector;
-
 use crate::types::{Corners, Dim, Lightness, Mask, Point2D, Point3D, Tag};
 
 use std::mem;
@@ -10,23 +9,11 @@ const TAG_M: f64 = 0.2;
 impl Detector {
     pub fn tags(&mut self, w: usize, h: usize, data: &Lightness) -> Vec<Tag> {
         let dim = Dim { w, h };
-        self.ensure(dim);
+        self.ws.ensure(dim);
 
-        #[cfg(feature = "rayon")]
-        rayon::join(
-            || mask::canny(&self.config, dim, data, &mut self.cws),
-            || mask::harris(&self.config, dim, data, &mut self.hws),
-        );
+        mask::canny(&self.config, dim, data, &mut self.ws);
 
-        #[cfg(not(feature = "rayon"))]
-        mask::canny(&self.config, dim, data, &mut self.cws);
-        mask::harris(&self.config, dim, data, &mut self.hws);
-
-        let edges = &self.cws.edges;
-        let corners = &self.hws.corners;
-
-        let candidates = candidates::candidates(&self.config, dim, edges, corners);
-
+        let candidates = candidates::candidates(&self.config, dim, &self.ws.edges);
         let half_fov_tan = (self.config.fov_rad / 2.0).tan();
 
         candidates
@@ -42,9 +29,9 @@ impl Detector {
             .collect()
     }
 
-    pub fn process(&mut self, w: usize, h: usize, data: &Lightness) -> (Vec<Tag>, Mask, Mask) {
+    pub fn process(&mut self, w: usize, h: usize, data: &Lightness) -> (Vec<Tag>, Mask) {
         let tags = self.tags(w, h, data);
-        (tags, mem::take(&mut self.cws.edges), mem::take(&mut self.hws.corners))
+        (tags, mem::take(&mut self.ws.edges))
     }
 }
 

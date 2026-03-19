@@ -1,11 +1,18 @@
+use crate::types::{Corners, Dim, Mask, Point2D, Quads};
 use crate::uf::UnionFind;
-use crate::types::{Dim, Mask, Point2D, Quads, Shapes};
 
-pub fn find_shapes(dim: Dim, edges: &Mask, corners: &Mask) -> Shapes {
-    let mut corners = corners.clone();
+fn extrema() -> Corners {
+    (
+        Point2D(f64::INFINITY,     f64::INFINITY),
+        Point2D(f64::NEG_INFINITY, f64::INFINITY),
+        Point2D(f64::INFINITY,     f64::NEG_INFINITY),
+        Point2D(f64::NEG_INFINITY, f64::NEG_INFINITY),
+    )
+}
 
+pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
     let mut labels = vec![0; edges.len()];
-    let mut label_pts = vec![Vec::new()];
+    let mut corners = vec![extrema()];
 
     let mut next_label = 0;
 
@@ -51,70 +58,51 @@ pub fn find_shapes(dim: Dim, edges: &Mask, corners: &Mask) -> Shapes {
                 None => {
                     next_label += 1;
                     uf.push(next_label);
-                    label_pts.push(Vec::new());
+                    corners.push(extrema());
                     next_label
                 }
             };
+
             labels[i] = id;
 
-            let mut corner = None;
+            let cnrs = &mut corners[id as usize];
+            let pt = Point2D(x as f64, y as f64);
 
-            for yy in (y - 1)..=(y + 1) {
-                let rr = yy * w;
-
-                for xx in (x - 1)..=(x + 1) {
-                    let ii = xx + rr;
-
-                    if corners[ii] == 1 {
-                        corner = Some((yy, xx));
-                        break;
-                    }
-                }
-
-                if corner.is_some() {
-                    break;
-                }
-            }
-
-            if let Some((cy, cx)) = corner {
-                label_pts[id as usize].push(Point2D(cx as f64, cy as f64));
-                corners[cx + cy * w] = 0;
-            }
+            cnrs.0 = cnrs.0.min(pt, &|p|  p.0 + p.1);
+            cnrs.1 = cnrs.1.min(pt, &|p| -p.0 + p.1);
+            cnrs.2 = cnrs.2.max(pt, &|p| -p.0 + p.1);
+            cnrs.3 = cnrs.3.max(pt, &|p|  p.0 + p.1);
         }
     }
 
-    let mut merged = vec![Vec::new(); (next_label as usize) + 1];
+    let mut merged = vec![extrema(); (next_label as usize) + 1];
 
     for id in 1..=next_label {
         let root = uf.find(id);
-        let pts = &label_pts[id as usize];
-        merged[root as usize].extend(pts);
+
+        let cnrs = &mut merged[root as usize];
+        let new = corners[id as usize];
+
+        cnrs.0 = cnrs.0.min(new.0, &|p|  p.0 + p.1);
+        cnrs.1 = cnrs.1.min(new.1, &|p| -p.0 + p.1);
+        cnrs.2 = cnrs.2.max(new.2, &|p| -p.0 + p.1);
+        cnrs.3 = cnrs.3.max(new.3, &|p|  p.0 + p.1);
     }
 
     merged
         .into_iter()
-        .filter(|pts| !pts.is_empty())
-        .collect()
-}
-
-pub fn filter_quads(shapes: Shapes) -> Quads {
-    shapes
-        .into_iter()
-        .filter_map(|pts| {
-            if pts.len() < 4 {
-                return None;
-            }
-
-            let tl = *pts.iter().min_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
-            let tr = *pts.iter().min_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
-            let bl = *pts.iter().max_by_key(|p| -(p.0 as i32) + p.1 as i32).unwrap();
-            let br = *pts.iter().max_by_key(|p|  (p.0 as i32) + p.1 as i32).unwrap();
-
-            if tl == tr || tl == bl || tl == br || tr == bl || tr == br || bl == br {
-                return None;
-            }
-
-            Some((tl, tr, bl, br))
+        .skip(1)
+        .filter(|(tl, tr, bl, br)| {
+            tl.0.is_finite()
+                && tr.0.is_finite()
+                && bl.0.is_finite()
+                && br.0.is_finite()
+                && *tl != *tr
+                && *tl != *bl
+                && *tl != *br
+                && *tr != *bl
+                && *tr != *br
+                && *bl != *br
         })
         .collect()
 }
