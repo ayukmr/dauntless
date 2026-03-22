@@ -11,9 +11,6 @@ pub fn candidates(config: &Config, dim: Dim, edges: &Mask) -> Quads {
     if config.filter_angles {
         res = filters::filter_angles(res);
     }
-    if config.filter_enclosed {
-        res = filters::filter_enclosed(res);
-    }
 
     res
 }
