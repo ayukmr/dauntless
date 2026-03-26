@@ -1,4 +1,5 @@
 use crate::{candidates, decode, mask};
+use crate::config::Config;
 use crate::detector::Detector;
 use crate::types::{Corners, Dim, Lightness, Mask, Point2D, Point3D, Tag};
 
@@ -7,14 +8,14 @@ use std::mem;
 const TAG_M: f64 = 0.2;
 
 impl Detector {
-    pub fn tags(&mut self, w: usize, h: usize, data: &Lightness) -> Vec<Tag> {
+    pub fn tags(&mut self, w: usize, h: usize, config: &Config, data: &Lightness) -> Vec<Tag> {
         let dim = Dim { w, h };
         self.ws.ensure(dim);
 
-        mask::canny(&self.config, dim, data, &mut self.ws);
+        mask::canny(config, dim, data, &mut self.ws);
 
-        let candidates = candidates::candidates(&self.config, dim, &self.ws.edges);
-        let half_fov_tan = (self.config.fov_rad / 2.0).tan();
+        let candidates = candidates::candidates(config, dim, &self.ws.edges);
+        let half_fov_tan = (config.fov.to_radians() / 2.0).tan();
 
         candidates
             .into_iter()
@@ -29,8 +30,8 @@ impl Detector {
             .collect()
     }
 
-    pub fn process(&mut self, w: usize, h: usize, data: &Lightness) -> (Vec<Tag>, Mask) {
-        let tags = self.tags(w, h, data);
+    pub fn process(&mut self, w: usize, h: usize, config: &Config, data: &Lightness) -> (Vec<Tag>, Mask) {
+        let tags = self.tags(w, h, config, data);
         (tags, mem::take(&mut self.ws.edges))
     }
 }

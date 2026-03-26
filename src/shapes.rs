@@ -1,15 +1,6 @@
 use crate::types::{Corners, Dim, Mask, Point2D, Quads};
 use crate::uf::UnionFind;
 
-fn extrema() -> Corners {
-    (
-        Point2D(f64::INFINITY,     f64::INFINITY),
-        Point2D(f64::NEG_INFINITY, f64::INFINITY),
-        Point2D(f64::INFINITY,     f64::NEG_INFINITY),
-        Point2D(f64::NEG_INFINITY, f64::NEG_INFINITY),
-    )
-}
-
 pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
     let mut labels = vec![0; edges.len()];
     let mut corners = vec![extrema()];
@@ -105,4 +96,13 @@ pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
                 && *bl != *br
         })
         .collect()
+}
+
+fn extrema() -> Corners {
+    (
+        Point2D(f64::INFINITY,     f64::INFINITY),
+        Point2D(f64::NEG_INFINITY, f64::INFINITY),
+        Point2D(f64::INFINITY,     f64::NEG_INFINITY),
+        Point2D(f64::NEG_INFINITY, f64::NEG_INFINITY),
+    )
 }

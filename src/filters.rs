@@ -1,4 +1,4 @@
-use crate::types::{Corners, Point2D, Quads};
+use crate::types::{Point2D, Quads};
 
 use std::f32;
 

@@ -3,7 +3,6 @@ use crate::types::{Bits, Corners, Dim, Lightness, Point2D};
 
 use std::cmp::Ordering;
 
-const BIT_THRESH: f32 = 0.5;
 const ERR_THRESH: u32 = 2;
 const N_MEANS: usize = 5;
 
@@ -31,7 +30,7 @@ pub fn decode(dim: Dim, img: &Lightness, corners: Corners) -> Option<u32> {
     let mut bits =
         tag
             .into_iter()
-            .map(|x| (x - min) / (max - min) > BIT_THRESH)
+            .map(|x| (x - min) / (max - min) > 0.5)
             .collect::<Bits>();
 
     let mut best: Option<(usize, u32)> = None;

@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::types::{Dim, Lightness, Mask};
 
 use std::collections::VecDeque;
@@ -6,12 +5,11 @@ use std::collections::VecDeque;
 #[derive(Default)]
 pub struct Detector {
     pub ws: Workspace,
-    pub config: Config,
 }
 
 impl Detector {
-    pub fn new(config: Config) -> Self {
-        Self { config, ..Detector::default() }
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
