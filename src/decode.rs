@@ -82,6 +82,11 @@ fn sample(dim: Dim, img: &Lightness, corners: Corners) -> Option<Lightness> {
     let mut out = vec![0.0; 36];
 
     let w = dim.w;
+    let h = dim.h;
+
+    let dx = corners.0.0 - corners.1.0;
+    let dy = corners.0.1 - corners.1.1;
+    let neighbors = dx * dx + dy * dy >= 256.0;
 
     for y in 0..6 {
         for x in 0..6 {
@@ -90,11 +95,13 @@ fn sample(dim: Dim, img: &Lightness, corners: Corners) -> Option<Lightness> {
 
             let Point2D(ix, iy) = hm.map(u, v);
 
-            let i = ix.floor() as usize + iy.floor() as usize * w;
+            let ixf = ix.floor() as usize;
+            let iyf = iy.floor() as usize;
 
-            let dx = corners.0.0 - corners.1.0;
-            let dy = corners.0.1 - corners.1.1;
-            let neighbors = dx * dx + dy * dy >= 256.0;
+            if neighbors && (ixf < 1 || ixf > w - 1 || iyf < 1 || iyf > h - 1) {
+                return None;
+            }
+            let i = iyf * w + ixf;
 
             let val =
                 if neighbors {

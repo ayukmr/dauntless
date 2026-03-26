@@ -2,7 +2,7 @@ use crate::types::{Point2D, Quads};
 
 use std::f32;
 
-const MAX_RATIO: f32 = 1.3;
+const MAX_RATIO: f32 = 1.75;
 const VH_MAX_RATIO: f32 = 6.0;
 
 pub fn filter_ratios(quads: Quads) -> Quads {
@@ -55,7 +55,7 @@ pub fn filter_angles(quads: Quads) -> Quads {
 
                 let rad = ((a.0 * b.0 + a.1 * b.1) / (a_mag * b_mag)).acos();
 
-                if (rad - f32::consts::FRAC_PI_2).abs() > f32::consts::FRAC_PI_6 {
+                if (rad - f32::consts::FRAC_PI_2).abs() > f32::consts::FRAC_PI_4 {
                     return false;
                 }
             }

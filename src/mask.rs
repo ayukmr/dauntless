@@ -10,7 +10,7 @@ pub fn canny(config: &Config, dim: Dim, img: &Lightness, ws: &mut Workspace) {
     for i in 0..dim.len() {
         let gx = ws.gx[i];
         let gy = ws.gy[i];
-        ws.mag[i] = (gx*gx + gy*gy).sqrt();
+        ws.mag[i] = (gx * gx + gy * gy).sqrt();
     }
 
     for i in 0..dim.len() {
