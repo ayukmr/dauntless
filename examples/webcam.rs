@@ -1,4 +1,4 @@
-use dauntless::Tag;
+use dauntless::{Config, Tag};
 
 use std::time::Instant;
 
@@ -70,7 +70,7 @@ fn main() -> opencv::Result<()> {
                 .map(|l| l as f32 / 255.0)
                 .collect();
 
-        let tags = detector.tags(sw as usize, sh as usize, data);
+        let tags = detector.tags(sw as usize, sh as usize, &Config::default(), data);
 
         for tag in tags {
             let Tag { id, rot, pos, corners: (tl, tr, bl, br) } = tag;

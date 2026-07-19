@@ -1,12 +1,11 @@
 use crate::types::{Corners, Dim, Mask, Point2D, Quads};
 use crate::uf::UnionFind;
 
-pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
-    let mut labels = vec![0; edges.len()];
+pub fn find_shapes(dim: Dim, edges: &Mask, labels: &mut Vec<u32>) -> Quads {
+    labels.fill(0);
     let mut corners = vec![extrema()];
 
     let mut next_label = 0;
-
     let mut uf = UnionFind::new();
 
     let w = dim.w;
@@ -24,11 +23,11 @@ pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
 
             let mut id = None;
 
-            for yy in (y - 2)..=y {
+            for yy in (y - 2)..(y + 1) {
                 let rr = yy * w;
                 let xx_end = if yy == y { x } else { x + 2 };
 
-                for xx in (x - 2)..=xx_end {
+                for xx in (x - 2)..(xx_end + 1) {
                     let ii = xx + rr;
 
                     let nid = labels[ii];
@@ -37,7 +36,9 @@ pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
                     }
 
                     if let Some(id) = id {
-                        uf.unite(id, nid);
+                        if nid != id {
+                            uf.unite(id, nid);
+                        }
                     } else {
                         id = Some(nid);
                     }
@@ -68,7 +69,7 @@ pub fn find_shapes(dim: Dim, edges: &Mask) -> Quads {
 
     let mut merged = vec![extrema(); (next_label as usize) + 1];
 
-    for id in 1..=next_label {
+    for id in 1..(next_label + 1) {
         let root = uf.find(id);
 
         let cnrs = &mut merged[root as usize];

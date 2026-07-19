@@ -1,8 +1,10 @@
+use dauntless::Config;
+
 use std::time::Instant;
 use image::imageops::{self, FilterType};
 
 fn main() {
-    let img = image::open("data/4.jpg").unwrap();
+    let img = image::open("data/3.jpg").unwrap();
     let light = img.to_luma8();
 
     let (w, h) = light.dimensions();
@@ -33,7 +35,7 @@ fn main() {
 
     for i in 0..runs {
         let start = Instant::now();
-        let _ = detector.tags(sw, sh, &data);
+        let _ = detector.tags(sw, sh, &Config::default(), &data);
         let ms = start.elapsed().as_secs_f32() * 1000.0;
 
         print!("\r{:.2} ms", ms);

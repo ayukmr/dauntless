@@ -7,32 +7,22 @@ pub fn canny(config: &Config, dim: Dim, img: &Lightness, ws: &mut Workspace) {
     blur(dim, img, &mut ws.bh, &mut ws.blur);
     sobel(dim, &ws.blur, &mut ws.gx, &mut ws.gy);
 
-    for i in 0..dim.len() {
-        let gx = ws.gx[i];
-        let gy = ws.gy[i];
-        ws.mag[i] = (gx * gx + gy * gy).sqrt();
-    }
+    let mut max = f32::NEG_INFINITY;
 
     for i in 0..dim.len() {
         let gx = ws.gx[i];
         let gy = ws.gy[i];
 
-        let ax = gx.abs();
-        let ay = gy.abs();
-
-        ws.orient[i] = if ay <= ax * 0.4142 {
-            (1, 0)
-        } else if ay >= ax * 2.4142 {
-            (0, 1)
-        } else if gx * gy > 0.0 {
-            (1, 1)
-        } else {
-            (1, -1)
-        };
+        let mag = gx * gx + gy * gy;
+        ws.mag[i] = mag;
+        max = max.max(mag);
     }
 
-    post::nms(dim, &ws.mag, &ws.orient, &mut ws.supp);
-    post::hysteresis(config, dim, &ws.supp, &mut ws.strong, &mut ws.weak, &mut ws.dq, &mut ws.edges);
+    let low = config.hyst_low * config.hyst_low * max;
+    let high = config.hyst_high * config.hyst_high * max;
+
+    post::nms(dim, &ws.gx, &ws.gy, &ws.mag, low, &mut ws.supp);
+    post::hysteresis(dim, high, low, &ws.supp, &mut ws.dq, &mut ws.edges);
 }
 
 pub fn blur(dim: Dim, img: &Lightness, bh: &mut Lightness, out: &mut Lightness) {

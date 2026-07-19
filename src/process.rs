@@ -14,8 +14,8 @@ impl Detector {
 
         mask::canny(config, dim, data, &mut self.ws);
 
-        let candidates = candidates::candidates(config, dim, &self.ws.edges);
-        let half_fov_tan = (config.fov.to_radians() / 2.0).tan();
+        let candidates = candidates::candidates(config, dim, &self.ws.edges, &mut self.ws.labels);
+        let half_fov_tan = (config.fov.to_radians() / 2.0).tan() as f64;
 
         candidates
             .into_iter()
@@ -37,28 +37,28 @@ impl Detector {
 }
 
 fn rotation((tl, tr, bl, br): Corners) -> f32 {
-    let x0 = (tr.0 - tl.0) as f32;
-    let x1 = (br.0 - bl.0) as f32;
+    let x0 = (tr.0 - tl.0).hypot(tr.1 - tl.1);
+    let x1 = (br.0 - bl.0).hypot(br.1 - bl.1);
 
     let vis = (x0 + x1) / 2.0;
 
-    let y0 = (bl.1 - tl.1) as f32;
-    let y1 = (br.1 - tr.1) as f32;
+    let y0 = (bl.1 - tl.1).hypot(bl.0 - tl.0);
+    let y1 = (br.1 - tr.1).hypot(br.0 - tr.0);
 
     let real = (y0 + y1) / 2.0;
 
     let sign = if y0 > y1 { 1.0 } else { -1.0 };
 
-    if vis != 0.0 && real != 0.0 {
-        (vis / real).clamp(-1.0, 1.0).acos() * sign
+    if vis > 0.0 && real > 0.0 {
+        ((vis / real).clamp(-1.0, 1.0).acos() * sign) as f32
     } else {
         0.0
     }
 }
 
-fn position((tl, tr, bl, br): Corners, dim: Dim, half_fov_tan: f32) -> Point3D {
-    let y0 = bl.1 - tl.1;
-    let y1 = br.1 - tr.1;
+fn position((tl, tr, bl, br): Corners, dim: Dim, half_fov_tan: f64) -> Point3D {
+    let y0 = (bl.0 - tl.0).hypot(bl.1 - tl.1);
+    let y1 = (br.0 - tr.0).hypot(br.1 - tr.1);
 
     let cnrs_3d = [
         to_3d(Point2D(tl.0, tl.1), y0, dim, half_fov_tan),
@@ -74,7 +74,7 @@ fn position((tl, tr, bl, br): Corners, dim: Dim, half_fov_tan: f32) -> Point3D {
     Point3D(x, y, z)
 }
 
-fn to_3d(point: Point2D, vis: f64, dim: Dim, half_fov_tan: f32) -> Point3D {
+fn to_3d(point: Point2D, vis: f64, dim: Dim, half_fov_tan: f64) -> Point3D {
     let img_w = dim.w as f64;
     let img_h = dim.h as f64;
 
