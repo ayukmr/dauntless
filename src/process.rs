@@ -5,7 +5,7 @@ use crate::types::{Corners, Dim, Lightness, Mask, Point2D, Point3D, Tag};
 
 use std::mem;
 
-const TAG_M: f64 = 0.2;
+const TAG_M: f64 = 0.1651;
 
 impl Detector {
     pub fn tags(&mut self, w: usize, h: usize, config: &Config, data: &Lightness) -> Vec<Tag> {

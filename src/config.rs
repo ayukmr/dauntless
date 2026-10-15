@@ -13,7 +13,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            fov: 75.0_f32,
+            fov: 50.0_f32,
 
             hyst_high: 0.05,
             hyst_low: 0.025,

@@ -98,7 +98,7 @@ fn sample(dim: Dim, img: &Lightness, corners: Corners) -> Option<Lightness> {
             let ixf = ix.floor() as usize;
             let iyf = iy.floor() as usize;
 
-            if neighbors && (ixf < 1 || ixf > w - 1 || iyf < 1 || iyf > h - 1) {
+            if neighbors && (ixf < 1 || ixf >= w - 1 || iyf < 1 || iyf >= h - 1) {
                 return None;
             }
             let i = iyf * w + ixf;
